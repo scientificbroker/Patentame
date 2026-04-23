@@ -107,6 +107,10 @@ const App: React.FC = () => {
     const handleFileChange = (setter: React.Dispatch<React.SetStateAction<UploadedFile | null>>) => (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
+            if (file.size > 3.5 * 1024 * 1024) {
+                alert(lang === 'es' ? 'El archivo es demasiado grande. Por favor sube un documento de menos de 3.5 MB.' : 'File is too large. Please upload a document smaller than 3.5 MB.');
+                return;
+            }
             const reader = new FileReader();
             if (file.type === 'application/pdf') {
                 reader.onload = (e) => setter({ name: file.name, content: (e.target?.result as string).split(',')[1], mimeType: file.type });
@@ -220,20 +224,36 @@ const App: React.FC = () => {
         switch (step) {
             case 0: // Welcome
                 return (
-                    <div className="text-center">
-                        <h2 className="text-4xl font-bold mb-4">{STRINGS[lang].welcome.title}</h2>
-                        <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">{STRINGS[lang].welcome.subtitle}</p>
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-                           <button onClick={() => setPatentType('invention')} className={`w-full p-6 rounded-xl border-2 transition-all ${patentType === 'invention' ? 'border-purple-500 bg-purple-500/10' : 'border-white/20 hover:bg-white/5'}`}>
-                               <h3 className="text-xl font-semibold">{STRINGS[lang].welcome.invention}</h3>
-                               <p className="text-sm text-gray-400 mt-1">{STRINGS[lang].welcome.inventionDesc}</p>
+                    <div className="text-center flex flex-col items-center">
+                        <div className="inline-flex items-center justify-center px-4 py-1.5 mb-6 text-sm font-medium rounded-full bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 text-purple-300">
+                            <SparklesIcon className="w-4 h-4 mr-2 text-purple-400" />
+                            {lang === 'es' ? 'Una innovación del Grupo Biogenia' : 'An innovation by Grupo Biogenia'}
+                        </div>
+                        <h2 className="text-5xl font-extrabold mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-purple-200">
+                            {STRINGS[lang].welcome.title}
+                        </h2>
+                        <p className="text-lg text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
+                            {lang === 'es' 
+                             ? 'Simplifica y acelera la redacción de tus solicitudes de patente. Nuestra IA especializada te guiará paso a paso, analizando tu arte previo y estructurando tus ideas bajo los estándares internacionales de la OMPI.'
+                             : 'Simplify and accelerate the drafting of your patent applications. Our specialized AI will guide you step-by-step, analyzing your prior art and structuring your ideas under international WIPO standards.'
+                            }
+                        </p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl mx-auto mb-10">
+                           <button onClick={() => setPatentType('invention')} className={`group relative overflow-hidden p-8 rounded-2xl border-2 transition-all duration-300 text-left ${patentType === 'invention' ? 'border-purple-500 bg-purple-900/30 shadow-[0_0_30px_rgba(168,85,247,0.2)]' : 'border-white/10 bg-black/40 hover:border-purple-500/50 hover:bg-white/5'}`}>
+                               <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-purple-500/20 rounded-full blur-2xl group-hover:bg-purple-500/40 transition-all"></div>
+                               <h3 className="text-2xl font-bold text-white mb-2 relative z-10">{STRINGS[lang].welcome.invention}</h3>
+                               <p className="text-gray-400 relative z-10">{STRINGS[lang].welcome.inventionDesc}</p>
                            </button>
-                           <button onClick={() => setPatentType('utilityModel')} className={`w-full p-6 rounded-xl border-2 transition-all ${patentType === 'utilityModel' ? 'border-purple-500 bg-purple-500/10' : 'border-white/20 hover:bg-white/5'}`}>
-                               <h3 className="text-xl font-semibold">{STRINGS[lang].welcome.utilityModel}</h3>
-                               <p className="text-sm text-gray-400 mt-1">{STRINGS[lang].welcome.utilityModelDesc}</p>
+                           
+                           <button onClick={() => setPatentType('utilityModel')} className={`group relative overflow-hidden p-8 rounded-2xl border-2 transition-all duration-300 text-left ${patentType === 'utilityModel' ? 'border-blue-500 bg-blue-900/30 shadow-[0_0_30px_rgba(59,130,246,0.2)]' : 'border-white/10 bg-black/40 hover:border-blue-500/50 hover:bg-white/5'}`}>
+                               <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl group-hover:bg-blue-500/40 transition-all"></div>
+                               <h3 className="text-2xl font-bold text-white mb-2 relative z-10">{STRINGS[lang].welcome.utilityModel}</h3>
+                               <p className="text-gray-400 relative z-10">{STRINGS[lang].welcome.utilityModelDesc}</p>
                            </button>
                         </div>
-                         <div className="mt-8 max-w-3xl mx-auto text-xs text-gray-400 text-center">
+                        
+                         <div className="max-w-3xl mx-auto text-xs text-gray-500 border-t border-white/10 pt-6">
                             <p>{STRINGS[lang].welcome.disclaimer}</p>
                         </div>
                     </div>
@@ -256,6 +276,21 @@ const App: React.FC = () => {
                     <div>
                         <h2 className="text-3xl font-bold mb-2">{STRINGS[lang].upload.title}</h2>
                         <p className="text-gray-400 mb-6">{STRINGS[lang].upload.subtitle}</p>
+                        
+                        <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-xl mb-6">
+                           <div className="flex items-start">
+                             <InfoIcon className="w-5 h-5 text-blue-400 mr-3 shrink-0 mt-0.5" />
+                             <div>
+                               <h4 className="text-sm font-semibold text-blue-300 mb-1">{lang === 'es' ? 'Límite de tamaño' : 'Size limit'}</h4>
+                               <p className="text-sm text-blue-200/80">
+                                 {lang === 'es' 
+                                  ? 'Para garantizar un procesamiento rápido y evitar errores de red, por favor asegúrate de que cada documento pese menos de 3.5 MB. Si tu archivo es más pesado, considera subir solo las páginas más relevantes.'
+                                  : 'To ensure fast processing and avoid network errors, please make sure each document is under 3.5 MB. If your file is larger, consider uploading only the relevant pages.'}
+                               </p>
+                             </div>
+                           </div>
+                        </div>
+
                         <div className="space-y-6">
                             <FileInput id="prior-art-file" label={STRINGS[lang].upload.priorArt} file={priorArtDoc} onChange={handleFileChange(setPriorArtDoc)} />
                             <FileInput id="invention-desc-file" label={STRINGS[lang].upload.inventionDesc} file={inventionDescDoc} onChange={handleFileChange(setInventionDescDoc)} />
