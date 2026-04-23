@@ -6,7 +6,7 @@ import { SectionInput } from './components/SectionInput';
 import { improveText, isAiAvailable, generateDraft } from './src/services/gemini';
 import { SparklesIcon, DownloadIcon, UploadIcon, PencilIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, FileTextIcon, GithubIcon, InfoIcon } from './components/icons';
 import { STRINGS, getSectionDetails } from './data/i18n';
-import customLogo from './assets/logo.png';
+import customLogo from './assets/logot.png';
 
 
 // New Components
