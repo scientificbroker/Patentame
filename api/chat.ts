@@ -8,6 +8,9 @@ interface RequestBody {
   };
 }
 
+// Aumentar el límite de tiempo de Vercel de 10s (por defecto) a 60s
+export const maxDuration = 60;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Solo permitir POST
   if (req.method !== 'POST') {
