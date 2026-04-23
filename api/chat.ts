@@ -1,7 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { config } from 'dotenv';
-config({ path: '.env.local' });
-
 interface RequestBody {
   action?: string;
   payload?: {
