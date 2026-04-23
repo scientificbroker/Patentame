@@ -65,8 +65,15 @@ async function callChatApi(
   });
 
   if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: 'Unknown server error' }));
-    throw new Error(err.error ?? `Server responded with ${response.status}`);
+    const text = await response.text().catch(() => '');
+    let errorMsg = `HTTP Error ${response.status}: `;
+    try {
+      const err = JSON.parse(text);
+      errorMsg += err.error || 'Unknown error';
+    } catch {
+      errorMsg += text ? text.substring(0, 100) : 'No response body';
+    }
+    throw new Error(errorMsg);
   }
 
   const data = await response.json();
