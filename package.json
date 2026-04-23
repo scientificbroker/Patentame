@@ -1,5 +1,5 @@
 {
-  "name": "patentame📝",
+  "name": "patentame",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,10 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
     "@google/genai": "^1.27.0",
-    "react-canvas-draw": "^1.2.1"
+    "dotenv": "^17.4.2",
+    "react": "^19.2.0",
+    "react-canvas-draw": "^1.2.1",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

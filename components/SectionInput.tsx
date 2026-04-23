@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PencilIcon, QuestionMarkIcon, InfoIcon } from './icons';
-import { isAiAvailable } from '../services/geminiService';
+import { isAiAvailable } from '../src/services/gemini';
 
 interface SectionInputProps {
   id: string;

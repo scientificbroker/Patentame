@@ -1,13 +1,5 @@
-import { GoogleGenAI, Modality, Part } from "@google/genai";
+import { Modality, Part } from "@google/genai";
 import { PatentData, PatentType, Language, PatentSectionKey, UploadedFile, SectionDetail } from '../types';
-
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-  console.warn("API_KEY environment variable not set. AI features will be disabled.");
-}
-
-const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 const langToName = (lang: Language) => (lang === 'es' ? 'Spanish' : 'English');
 
@@ -44,7 +36,7 @@ export const generateDraft = async (
     priorArtDoc: UploadedFile | null,
     inventionDescDoc: UploadedFile | null
 ): Promise<string> => {
-    if (!ai || (!priorArtDoc && !inventionDescDoc && !patentData.priorArt)) {
+    if (!priorArtDoc && !inventionDescDoc && !patentData.priorArt) {
         return Promise.resolve("");
     }
     
@@ -77,14 +69,24 @@ export const generateDraft = async (
     parts.unshift({ text: userPrompt });
 
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: { parts },
-            config: { systemInstruction },
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'generateDraft',
+                payload: { systemInstruction, parts, model: 'gemini-2.5-flash' }
+            })
         });
-        return response.text;
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || \`HTTP error \${response.status}\`);
+        }
+
+        const data = await response.json();
+        return data.text || '';
     } catch (error) {
-        console.error("Error generating draft with Gemini:", error);
+        console.error("Error generating draft with Gemini API:", error);
         return ""; // Fail silently for predictions
     }
 };
@@ -99,10 +101,6 @@ export const improveText = async (
   priorArtDoc: UploadedFile | null,
   inventionDescDoc: UploadedFile | null
 ): Promise<string> => {
-  if (!ai) {
-    return Promise.resolve("AI functionality is disabled. Please configure the API_KEY.");
-  }
-
   const patentTypeName = patentType === 'invention' ? 'Invention Patent' : 'Utility Model';
   const { parts, priorArtContext, inventionDescContext } = getPartsFromDocs(priorArtDoc, inventionDescDoc);
   
@@ -142,20 +140,30 @@ export const improveText = async (
   parts.unshift({ text: userPrompt });
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: { parts },
-      config: { systemInstruction },
-    });
-    return response.text;
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'improveText',
+                payload: { systemInstruction, parts, model: 'gemini-2.5-flash' }
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || \`HTTP error \${response.status}\`);
+        }
+
+        const data = await response.json();
+        return data.text || '';
   } catch (error)
   {
-    console.error("Error improving text with Gemini:", error);
+    console.error("Error improving text with Gemini API:", error);
     if (error instanceof Error) {
-        return `Error: AI service failed. ${error.message}`;
+        return \`Error: AI service failed. \${error.message}\`;
     }
     return "Error: An unknown error occurred with the AI service.";
   }
 };
 
-export const isAiAvailable = (): boolean => !!ai;
+export const isAiAvailable = (): boolean => true;

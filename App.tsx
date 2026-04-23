@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { PatentData, PatentSectionKey, PatentType, Language, UploadedFile } from './types';
 import { SectionInput } from './components/SectionInput';
-import { improveText, isAiAvailable, generateDraft } from './services/geminiService';
+import { improveText, isAiAvailable, generateDraft } from './src/services/gemini';
 import { SparklesIcon, DownloadIcon, UploadIcon, PencilIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, FileTextIcon, GithubIcon, InfoIcon } from './components/icons';
 import { STRINGS, getSectionDetails } from './data/i18n';
 
