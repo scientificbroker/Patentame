@@ -11,7 +11,7 @@ import customLogo from './assets/logot.png';
 
 // New Components
 const LanguageSwitcher = ({ lang, setLang }: { lang: Language; setLang: (lang: Language) => void; }) => (
-    <div className="absolute top-6 right-6 flex items-center space-x-2 rounded-full p-1 bg-white/10">
+    <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center space-x-2 rounded-full p-1 bg-white/10 z-50 backdrop-blur-md">
         <button onClick={() => setLang('es')} className={`px-3 py-1 text-sm rounded-full transition-colors ${lang === 'es' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-white/20'}`}>ES</button>
         <button onClick={() => setLang('en')} className={`px-3 py-1 text-sm rounded-full transition-colors ${lang === 'en' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-white/20'}`}>EN</button>
     </div>
@@ -351,12 +351,12 @@ const App: React.FC = () => {
     };
     
     return (
-        <div className="min-h-screen bg-transparent text-white flex flex-col items-center p-4 sm:p-6 lg:p-8">
+        <div className="min-h-screen bg-transparent text-white flex flex-col items-center p-4 sm:p-6 lg:p-8 relative">
             <LanguageSwitcher lang={lang} setLang={setLang} />
-            <div className="w-full max-w-7xl mx-auto">
-                 <header className="mb-10">
+            <div className="w-full max-w-7xl mx-auto pt-14 sm:pt-4">
+                 <header className="mb-8">
                      <div className="flex flex-col items-center justify-center mb-6 select-none">
-                         <div className="relative flex items-center justify-center transform transition-transform hover:scale-105 duration-300 w-full max-w-xl">
+                         <div className="relative flex items-center justify-center transform transition-transform hover:scale-105 duration-300 w-full max-w-xs sm:max-w-sm md:max-w-lg">
                              <img src={customLogo} alt="Patentame Logo" className="w-full h-auto object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.3)] rounded-xl" />
                          </div>
                      </div>
