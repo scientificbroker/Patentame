@@ -355,13 +355,10 @@ const App: React.FC = () => {
             <LanguageSwitcher lang={lang} setLang={setLang} />
             <div className="w-full max-w-7xl mx-auto">
                  <header className="mb-10">
-                     <div className="flex items-center justify-center mb-4 select-none">
-                         <div className="relative mr-6 flex items-center justify-center transform transition-transform hover:scale-105 duration-300">
-                             <img src={customLogo} alt="Patentame Logo" className="h-20 sm:h-24 w-auto object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.3)]" />
+                     <div className="flex flex-col items-center justify-center mb-6 select-none">
+                         <div className="relative flex items-center justify-center transform transition-transform hover:scale-105 duration-300 w-full max-w-xl">
+                             <img src={customLogo} alt="Patentame Logo" className="w-full h-auto object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.3)] rounded-xl" />
                          </div>
-                         <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-100 to-blue-200 drop-shadow-sm pb-1" style={{ fontFamily: "'Inter', sans-serif" }}>
-                             Patentame
-                         </h1>
                      </div>
                       { !isAiAvailable() && (
                         <div className="max-w-3xl mx-auto bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-sm p-3 rounded-lg text-center" role="alert">
