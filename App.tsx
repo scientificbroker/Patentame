@@ -6,6 +6,7 @@ import { SectionInput } from './components/SectionInput';
 import { improveText, isAiAvailable, generateDraft } from './src/services/gemini';
 import { SparklesIcon, DownloadIcon, UploadIcon, PencilIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, FileTextIcon, GithubIcon, InfoIcon } from './components/icons';
 import { STRINGS, getSectionDetails } from './data/i18n';
+import customLogo from './assets/logo.png';
 
 
 // New Components
@@ -355,19 +356,8 @@ const App: React.FC = () => {
             <div className="w-full max-w-7xl mx-auto">
                  <header className="mb-10">
                      <div className="flex items-center justify-center mb-4 select-none">
-                         <div className="relative mr-5 flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 via-fuchsia-500 to-blue-600 shadow-[0_0_25px_rgba(168,85,247,0.3)] transform transition-transform hover:scale-105 duration-300">
-                             <div className="absolute inset-[2px] bg-[#0c0520] rounded-[14px] z-0"></div>
-                             <div className="relative z-10">
-                                 <svg className="w-8 h-8 drop-shadow-[0_0_8px_rgba(232,121,249,0.5)]" viewBox="0 0 24 24" fill="none" stroke="url(#logo-gradient)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                     <defs>
-                                         <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                             <stop stopColor="#e879f9" offset="0%" />
-                                             <stop stopColor="#60a5fa" offset="100%" />
-                                         </linearGradient>
-                                     </defs>
-                                     <path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.293 2.293a1 1 0 010 1.414L10 12l-2.293-2.293a1 1 0 010-1.414L10 6m5 4l2.293-2.293a1 1 0 000-1.414L15 6m-5 4l2.293 2.293a1 1 0 010 1.414L10 18l-2.293-2.293a1 1 0 010-1.414L10 12m5 4l2.293-2.293a1 1 0 000-1.414L15 12m-5 4h.01" />
-                                 </svg>
-                             </div>
+                         <div className="relative mr-6 flex items-center justify-center transform transition-transform hover:scale-105 duration-300">
+                             <img src={customLogo} alt="Patentame Logo" className="h-20 sm:h-24 w-auto object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.3)]" />
                          </div>
                          <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-100 to-blue-200 drop-shadow-sm pb-1" style={{ fontFamily: "'Inter', sans-serif" }}>
                              Patentame
