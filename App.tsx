@@ -10,11 +10,13 @@ import { STRINGS, getSectionDetails } from './data/i18n';
 import customLogo from './assets/logot.png';
 import { FtoChatbot } from './components/FtoChatbot';
 import { OnboardingTour } from './components/OnboardingTour';
+import { DonationModal } from './components/DonationModal';
+import { Heart } from 'lucide-react';
 
 
 // New Components
 const LanguageSwitcher = ({ lang, setLang }: { lang: Language; setLang: (lang: Language) => void; }) => (
-    <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center space-x-2 rounded-full p-1 bg-white/10 z-50 backdrop-blur-md">
+    <div className="flex items-center space-x-2 rounded-full p-1 bg-white/10 backdrop-blur-md">
         <button onClick={() => setLang('es')} className={`px-3 py-1 text-sm rounded-full transition-colors ${lang === 'es' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-white/20'}`}>ES</button>
         <button onClick={() => setLang('en')} className={`px-3 py-1 text-sm rounded-full transition-colors ${lang === 'en' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-white/20'}`}>EN</button>
     </div>
@@ -74,6 +76,9 @@ const App: React.FC = () => {
 
     // Onboarding State
     const [runOnboarding, setRunOnboarding] = useState(false);
+    
+    // Donation State
+    const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
 
     useEffect(() => {
         const hasSeen = localStorage.getItem('hasSeenOnboarding');
@@ -680,8 +685,25 @@ const App: React.FC = () => {
                     <span className="hidden sm:inline">{lang === 'es' ? 'Tutorial' : 'Tour'}</span>
                 </button>
             </div>
-            <LanguageSwitcher lang={lang} setLang={setLang} />
-            <div className="w-full max-w-7xl mx-auto pt-14 sm:pt-4">
+            
+            <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center space-x-3 z-50">
+                <button 
+                  onClick={() => setIsDonationModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors backdrop-blur-md shadow-sm border border-white/10 group"
+                >
+                  <Heart className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform fill-purple-400/20" />
+                  <span className="text-sm font-medium text-slate-200 hidden md:inline">
+                    {lang === 'es' ? 'Contribuye con un' : 'Contribute with a'}
+                  </span>
+                  <div className="flex items-center gap-1.5 ml-1">
+                    <div className="w-6 h-6 bg-[#74008B] rounded flex items-center justify-center text-white font-bold italic text-[9px] leading-none tracking-tighter shadow-sm">yape</div>
+                    <div className="w-6 h-6 bg-[#003087] rounded flex items-center justify-center text-white font-bold italic text-[12px] leading-none shadow-sm">P</div>
+                  </div>
+                </button>
+                <LanguageSwitcher lang={lang} setLang={setLang} />
+            </div>
+
+            <div className="w-full max-w-7xl mx-auto pt-14 sm:pt-10 md:pt-4">
                  <header className="mb-8">
                      <div className="flex flex-col items-center justify-center mb-6 select-none">
                          <div className="relative flex items-center justify-center transform transition-transform hover:scale-105 duration-300 w-full max-w-xs sm:max-w-sm md:max-w-lg">
@@ -761,6 +783,12 @@ const App: React.FC = () => {
             <FtoChatbot onSearchRequest={handleFtoSearch} />
             
             <OnboardingTour run={runOnboarding} onFinish={handleFinishOnboarding} lang={lang} />
+            
+            <DonationModal 
+              isOpen={isDonationModalOpen} 
+              onClose={() => setIsDonationModalOpen(false)} 
+              lang={lang} 
+            />
         </div>
     );
 };
