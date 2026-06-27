@@ -4,6 +4,7 @@ interface RequestBody {
   payload?: {
     systemInstruction?: string;
     parts?: any[];
+    contents?: any[];
     model?: string;
     responseFormat?: 'text' | 'json';
   };
@@ -21,8 +22,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Tomar el payload que envía el frontend (con soporte para los PDFs que ya envía)
   const { action, payload } = req.body as RequestBody;
 
-  if (!payload || !payload.parts) {
-    return res.status(400).json({ error: 'Faltan los datos (parts) en el payload' });
+  if (!payload || (!payload.parts && !payload.contents)) {
+    return res.status(400).json({ error: 'Faltan los datos (parts o contents) en el payload' });
   }
 
   // La API key viene del entorno — NUNCA del frontend
@@ -32,8 +33,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server.' });
   }
 
-  // System instruction dinámica según la sección (proviene de geminiService.ts)
-  const systemInstruction = payload.systemInstruction || "Eres un asistente de patentes.";
+  let systemInstruction = payload.systemInstruction || "Eres un asistente de patentes.";
+
+  if (action === 'ftoChat') {
+    systemInstruction = `Eres LIA, una Analista FTO (Freedom to Operate) y experta en patentes.
+Tu objetivo es ayudar al usuario a estructurar una estrategia de patentabilidad y evaluar riesgos.
+Debes actuar de manera fluida y conversacional. NUNCA pidas toda la información de golpe.
+Haz 1 o máximo 2 preguntas a la vez para recolectar:
+1. Descripción técnica (componentes, mecanismo de acción)
+2. Territorios de interés
+3. Sector tecnológico y estado del producto
+4. Competidores o presupuesto
+
+Cuando tengas suficiente información para una búsqueda preliminar, debes proponer una ecuación de búsqueda booleana experta (ej. usando IPC codes y palabras clave en inglés).
+Y si el usuario te comparte patentes encontradas, debes evaluar el riesgo y asignar un Semáforo de Riesgo FTO: CRÍTICO, ALTO, MODERADO, BAJO, o MÍNIMO.
+
+DEBES responder ÚNICAMENTE en formato JSON con la siguiente estructura exacta:
+{
+  "responseMessage": "Tu respuesta conversacional al usuario, preguntas o conclusiones.",
+  "isReadyToSearch": boolean (true solo si propones una ecuación de búsqueda),
+  "suggestedQuery": "Ecuación booleana (solo si isReadyToSearch es true)",
+  "riskLevel": "CRÍTICO" | "ALTO" | "MODERADO" | "BAJO" | "MÍNIMO" | null
+}
+IMPORTANTE: Tu respuesta debe ser un JSON válido, sin bloques de código (sin \`\`\`json).`;
+  }
   const model = payload.model || 'gemini-2.5-flash';
   const responseFormat = payload.responseFormat || 'text';
 
@@ -48,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           systemInstruction: {
             parts: [{ text: systemInstruction }]
           },
-          contents: [
+          contents: payload.contents || [
             {
               role: 'user',
               parts: payload.parts

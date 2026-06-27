@@ -8,6 +8,7 @@ import { searchPatents, PatentResult } from './src/services/api';
 import { SparklesIcon, DownloadIcon, UploadIcon, PencilIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, FileTextIcon, GithubIcon, InfoIcon } from './components/icons';
 import { STRINGS, getSectionDetails } from './data/i18n';
 import customLogo from './assets/logot.png';
+import { FtoChatbot } from './components/FtoChatbot';
 
 
 // New Components
@@ -167,6 +168,23 @@ const App: React.FC = () => {
             setSearchResults(results);
         } catch (error) {
             console.error('Patent search failed:', error);
+            alert(lang === 'es' ? 'Fallo en la búsqueda de patentes. Intenta de nuevo.' : 'Patent search failed. Try again.');
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    const handleFtoSearch = async (query: string) => {
+        setIsSearching(true);
+        setSearchResults([]);
+        setStep(1);
+        setSurveillanceMode('assistant');
+        setIdeaDescription(query); // Put the query in the box so they know what was searched
+        try {
+            const results = await searchPatents(query);
+            setSearchResults(results);
+        } catch (error) {
+            console.error('FTO Search failed:', error);
             alert(lang === 'es' ? 'Fallo en la búsqueda de patentes. Intenta de nuevo.' : 'Patent search failed. Try again.');
         } finally {
             setIsSearching(false);
@@ -717,6 +735,8 @@ const App: React.FC = () => {
                     </button>
                 </footer>
             </div>
+            
+            <FtoChatbot onSearchRequest={handleFtoSearch} />
         </div>
     );
 };

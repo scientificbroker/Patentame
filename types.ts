@@ -29,3 +29,13 @@ export interface UploadedFile {
     content: string;
     mimeType: string;
 }
+
+export type FtoRiskLevel = 'CRÍTICO' | 'ALTO' | 'MODERADO' | 'BAJO' | 'MÍNIMO';
+
+export interface FtoChatMessage {
+    role: 'user' | 'assistant';
+    text: string;
+    isReadyToSearch?: boolean;
+    suggestedQuery?: string;
+    riskLevel?: FtoRiskLevel;
+}

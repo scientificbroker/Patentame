@@ -1,0 +1,29 @@
+﻿MEMORIA TECNICA DE INVENCION
+
+Titulo provisional: Sistema de fermentacion controlada con biofilm inmovilizado para la produccion de acido hialuronico de alto peso molecular
+
+DESCRIPCION GENERAL:
+La presente invencion describe un nuevo proceso biotecnologico que permite la sintesis de acido hialuronico (AH) de alto peso molecular (>2 MDa) mediante el uso de cepas de Streptococcus zooepidemicus geneticamente modificadas inmovilizadas en un soporte de biofilm estructurado.
+
+PROBLEMA TECNICO:
+Los metodos actuales de fermentacion en lote (batch) para la produccion industrial de AH presentan las siguientes limitaciones:
+1. Rendimientos bajos (<6 g/L) debido a la inhibicion por producto acumulado.
+2. Alto costo de separacion y purificacion del polisacarido.
+3. Dificultad para controlar el peso molecular del producto final.
+
+No existe en el estado de la tecnica un proceso continuo que combine la inmovilizacion en biofilm con un sistema de alimentacion por gradiente de concentracion de glucosa.
+
+SOLUCION PROPUESTA (La Invencion):
+Se propone un biorreactor de flujo continuo con las siguientes caracteristicas novedosas:
+a) Modulo de biofilm: el microorganismo es inmovilizado en matrices de alginato de calcio reticulado con quitosano.
+b) Sistema de gradiente: un mecanismo de dosificacion controlado por sensores de glucosa en linea mantiene la concentracion del sustrato entre 15-25 g/L.
+c) Separacion in situ: una membrana de ultrafiltracion de corte 300 kDa integrada al biorreactor permite retirar el AH producido de forma continua.
+d) Control adaptativo: un algoritmo basado en redes neuronales ajusta automaticamente el pH y la temperatura en respuesta a los datos del sensor.
+
+RESULTADOS PRELIMINARES:
+- Rendimiento de AH: 18.4 g/L (incremento de ~3x respecto al estado del arte)
+- Peso molecular promedio: 2.3 MDa +/- 0.2 MDa
+- Estabilidad del proceso: >30 dias de operacion continua sin contaminacion
+
+INVENTORES: Grupo Biogenia Division de Biotecnologia Industrial
+FECHA: Junio 2026

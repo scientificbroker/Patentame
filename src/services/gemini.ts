@@ -54,7 +54,7 @@ const getPartsFromDocs = (
  * Returns the generated text or throws on error.
  */
 async function callChatApi(
-  action: 'generateDraft' | 'improveText' | 'classifyPatent' | 'extractKeywords',
+  action: 'generateDraft' | 'improveText' | 'classifyPatent' | 'extractKeywords' | 'ftoChat',
   systemInstruction: string,
   parts: Part[],
   responseFormat: 'text' | 'json' = 'text'
