@@ -9,6 +9,7 @@ import { SparklesIcon, DownloadIcon, UploadIcon, PencilIcon, CheckIcon, ChevronL
 import { STRINGS, getSectionDetails } from './data/i18n';
 import customLogo from './assets/logot.png';
 import { FtoChatbot } from './components/FtoChatbot';
+import { OnboardingTour } from './components/OnboardingTour';
 
 
 // New Components
@@ -70,6 +71,21 @@ const App: React.FC = () => {
     const [classification, setClassification] = useState<PatentClassification | null>(null);
     const [isClassifying, setIsClassifying] = useState(false);
     const [showManualSelect, setShowManualSelect] = useState(false);
+
+    // Onboarding State
+    const [runOnboarding, setRunOnboarding] = useState(false);
+
+    useEffect(() => {
+        const hasSeen = localStorage.getItem('hasSeenOnboarding');
+        if (!hasSeen) {
+            setRunOnboarding(true);
+        }
+    }, []);
+
+    const handleFinishOnboarding = () => {
+        localStorage.setItem('hasSeenOnboarding', 'true');
+        setRunOnboarding(false);
+    };
 
     const SECTIONS = useMemo(() => getSectionDetails(lang), [lang]);
     const WIZARD_STEPS = useMemo(() => [
@@ -378,7 +394,7 @@ const App: React.FC = () => {
                         <div className="flex border-b border-white/10 mb-6">
                             <button
                                 onClick={() => setSurveillanceMode('assistant')}
-                                className={`px-4 py-3 text-sm font-medium transition-all border-b-2 ${surveillanceMode === 'assistant' ? 'border-purple-500 text-purple-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-white/20'}`}
+                                className={`tour-surveillance-tab px-4 py-3 text-sm font-medium transition-all border-b-2 ${surveillanceMode === 'assistant' ? 'border-purple-500 text-purple-400' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-white/20'}`}
                             >
                                 🔍 {lang === 'es' ? 'Asistente de Vigilancia Tecnológica' : 'Technical Surveillance Assistant'}
                             </button>
@@ -658,6 +674,12 @@ const App: React.FC = () => {
     
     return (
         <div className="min-h-screen bg-transparent text-white flex flex-col items-center p-4 sm:p-6 lg:p-8 relative">
+            <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-50">
+                <button onClick={() => setRunOnboarding(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white text-sm" title={lang === 'es' ? 'Ver Tutorial' : 'View Tutorial'}>
+                    <InfoIcon className="w-4 h-4" />
+                    <span className="hidden sm:inline">{lang === 'es' ? 'Tutorial' : 'Tour'}</span>
+                </button>
+            </div>
             <LanguageSwitcher lang={lang} setLang={setLang} />
             <div className="w-full max-w-7xl mx-auto pt-14 sm:pt-4">
                  <header className="mb-8">
@@ -679,7 +701,7 @@ const App: React.FC = () => {
                         {WIZARD_STEPS.map((s, index) => (
                              <div className="flex-1 flex items-start" key={`${s.name}-${index}`}>
                                 <div className="flex flex-col items-center w-20 text-center">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 shrink-0 transition-all duration-300 ${
+                                    <div className={`tour-wizard-step-${index} w-10 h-10 rounded-full flex items-center justify-center border-2 shrink-0 transition-all duration-300 ${
                                         step > index ? 'bg-purple-600 border-purple-600' :
                                         step === index ? 'bg-purple-500 border-purple-500 ring-4 ring-purple-500/30' :
                                         'bg-gray-700 border-gray-600'
@@ -719,7 +741,7 @@ const App: React.FC = () => {
                     <button 
                         onClick={step === WIZARD_STEPS.length - 1 ? handleDownloadPdf : handleNext} 
                         disabled={!WIZARD_STEPS[step]?.isComplete}
-                        className="flex items-center px-6 py-2 bg-gradient-to-r from-[#A100A0] to-[#6b21a8] text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-[#b100b0] hover:to-[#7e22ce] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 focus:ring-offset-gray-900 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105"
+                        className="tour-next-button flex items-center px-6 py-2 bg-gradient-to-r from-[#A100A0] to-[#6b21a8] text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-[#b100b0] hover:to-[#7e22ce] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 focus:ring-offset-gray-900 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105"
                     >
                         {step === WIZARD_STEPS.length - 1 ? (
                             <>
@@ -737,6 +759,8 @@ const App: React.FC = () => {
             </div>
             
             <FtoChatbot onSearchRequest={handleFtoSearch} />
+            
+            <OnboardingTour run={runOnboarding} onFinish={handleFinishOnboarding} lang={lang} />
         </div>
     );
 };

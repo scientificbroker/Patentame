@@ -54,7 +54,11 @@ export const FtoChatbot: React.FC<FtoChatbotProps> = ({ onSearchRequest }) => {
       }
 
       const data = await response.json();
-      const parsedData = JSON.parse(data.result);
+      let rawText = data.text.trim();
+      if (rawText.startsWith('```')) {
+        rawText = rawText.replace(/^```(json)?\n?/, '').replace(/```$/, '').trim();
+      }
+      const parsedData = JSON.parse(rawText);
 
       const assistantMsg: FtoChatMessage = {
         role: 'assistant',
@@ -93,7 +97,7 @@ export const FtoChatbot: React.FC<FtoChatbotProps> = ({ onSearchRequest }) => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 p-4 bg-[#0a2540] text-white rounded-full shadow-2xl hover:bg-[#1a365d] transition-all transform hover:scale-105 z-50 flex items-center gap-2 group"
+          className="tour-fto-chatbot fixed bottom-6 right-6 p-4 bg-[#0a2540] text-white rounded-full shadow-2xl hover:bg-[#1a365d] transition-all transform hover:scale-105 z-50 flex items-center gap-2 group"
         >
           <Bot size={24} className="group-hover:animate-bounce" />
           <span className="hidden md:inline font-medium">Chat con LIA</span>
@@ -192,7 +196,7 @@ export const FtoChatbot: React.FC<FtoChatbotProps> = ({ onSearchRequest }) => {
                 }
               }}
               placeholder="Escribe tu mensaje aquí..."
-              className="flex-1 resize-none border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-[#0a2540]/20 text-sm"
+              className="flex-1 resize-none border border-slate-200 bg-white text-slate-900 placeholder-slate-400 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-[#0a2540]/20 text-sm"
               rows={2}
             />
             <button
