@@ -64,8 +64,8 @@ const App: React.FC = () => {
 
     const SECTIONS = useMemo(() => getSectionDetails(lang), [lang]);
     const WIZARD_STEPS = useMemo(() => [
-        { name: STRINGS[lang].steps.welcome, isComplete: patentType !== null },
-        { name: STRINGS[lang].steps.upload, isComplete: priorArtDoc !== null || inventionDescDoc !== null },
+        { name: STRINGS[lang].steps.welcome, isComplete: true },
+        { name: STRINGS[lang].steps.upload, isComplete: (priorArtDoc !== null || inventionDescDoc !== null) && patentType !== null },
         ...SECTIONS.map(s => ({ name: s.title, isComplete: s.id === 'detailedDescription' ? true : patentData[s.id].trim().length > 5 })),
         { name: STRINGS[lang].steps.checklist, isComplete: true },
     ], [lang, patentType, priorArtDoc, inventionDescDoc, patentData, SECTIONS]);
@@ -263,20 +263,6 @@ const App: React.FC = () => {
                              : 'Simplify and accelerate the drafting of your patent applications. Our specialized AI will guide you step-by-step, analyzing your prior art and structuring your ideas under international WIPO standards.'
                             }
                         </p>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl mx-auto mb-10">
-                           <button onClick={() => setPatentType('invention')} className={`group relative overflow-hidden p-8 rounded-2xl border-2 transition-all duration-300 text-left ${patentType === 'invention' ? 'border-purple-500 bg-purple-900/30 shadow-[0_0_30px_rgba(168,85,247,0.2)]' : 'border-white/10 bg-black/40 hover:border-purple-500/50 hover:bg-white/5'}`}>
-                               <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-purple-500/20 rounded-full blur-2xl group-hover:bg-purple-500/40 transition-all"></div>
-                               <h3 className="text-2xl font-bold text-white mb-2 relative z-10">{STRINGS[lang].welcome.invention}</h3>
-                               <p className="text-gray-400 relative z-10">{STRINGS[lang].welcome.inventionDesc}</p>
-                           </button>
-                           
-                           <button onClick={() => setPatentType('utilityModel')} className={`group relative overflow-hidden p-8 rounded-2xl border-2 transition-all duration-300 text-left ${patentType === 'utilityModel' ? 'border-blue-500 bg-blue-900/30 shadow-[0_0_30px_rgba(59,130,246,0.2)]' : 'border-white/10 bg-black/40 hover:border-blue-500/50 hover:bg-white/5'}`}>
-                               <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl group-hover:bg-blue-500/40 transition-all"></div>
-                               <h3 className="text-2xl font-bold text-white mb-2 relative z-10">{STRINGS[lang].welcome.utilityModel}</h3>
-                               <p className="text-gray-400 relative z-10">{STRINGS[lang].welcome.utilityModelDesc}</p>
-                           </button>
-                        </div>
                         
                          <div className="max-w-3xl mx-auto text-xs text-gray-500 border-t border-white/10 pt-6">
                             <p>{STRINGS[lang].welcome.disclaimer}</p>
