@@ -54,14 +54,15 @@ const getPartsFromDocs = (
  * Returns the generated text or throws on error.
  */
 async function callChatApi(
-  action: 'generateDraft' | 'improveText',
+  action: 'generateDraft' | 'improveText' | 'classifyPatent',
   systemInstruction: string,
-  parts: Part[]
+  parts: Part[],
+  responseFormat: 'text' | 'json' = 'text'
 ): Promise<string> {
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, payload: { systemInstruction, parts } }),
+    body: JSON.stringify({ action, payload: { systemInstruction, parts, responseFormat } }),
   });
 
   if (!response.ok) {
@@ -85,6 +86,89 @@ async function callChatApi(
 // ---------------------------------------------------------------------------
 
 export const isAiAvailable = (): boolean => true; // Always true — key lives on the server
+
+// ---------------------------------------------------------------------------
+// Patent Classification
+// ---------------------------------------------------------------------------
+
+export interface PatentClassification {
+  recommendation: 'invention' | 'utilityModel';
+  confidence: 'high' | 'medium' | 'low';
+  reasoning: string;
+  signals: string[];
+  risks: string;
+}
+
+export const classifyPatentType = async (
+  priorArtDoc: UploadedFile | null,
+  inventionDescDoc: UploadedFile | null,
+  lang: Language
+): Promise<PatentClassification> => {
+  const { parts, priorArtContext, inventionDescContext } = getPartsFromDocs(
+    priorArtDoc,
+    inventionDescDoc
+  );
+
+  const systemInstruction = `You are an expert patent attorney specialized in WIPO/OMPI/INDECOPI regulations. 
+Your task is to analyze technical documents and classify the invention type using strict legal criteria.
+You must respond ONLY with a valid JSON object, no markdown, no explanations outside the JSON.`;
+
+  const userPrompt = `Analyze the following technical documents and determine whether this invention qualifies better as:
+- "invention": An Invention Patent — requires an absolute inventive step (non-obvious solution to a technical problem), 
+  can cover products, processes, methods, compositions, or systems. Protection: 20 years.
+- "utilityModel": A Utility Model — covers practical improvements to existing tools, devices, or objects 
+  (3-dimensional physical forms only). Lower inventive step required. Protection: 10 years.
+
+Key criteria to evaluate:
+1. INVENTIVE STEP: Is the solution non-obvious to someone skilled in the art? (High step → invention; Low step → utilityModel)
+2. SUBJECT MATTER: Does it cover a process/method/composition/system? (→ invention) OR only a physical object shape? (→ utilityModel)
+3. NOVELTY: Is it an absolute new solution or an improvement of something existing?
+4. TECHNICAL SIGNALS: Look for keywords like "método", "proceso", "sistema", "composición", "síntesis" (→ invention) 
+   vs "mejora de", "dispositivo modificado", "herramienta", "utensilio", "forma" (→ utilityModel)
+
+Documents to analyze:
+
+--- STATE OF THE ART / PRIOR ART ---
+${priorArtContext}
+
+--- INVENTION DESCRIPTION ---
+${inventionDescContext}
+
+Respond ONLY with this exact JSON structure (no markdown, no extra text):
+{
+  "recommendation": "invention" or "utilityModel",
+  "confidence": "high" or "medium" or "low",
+  "reasoning": "2-3 sentence legal justification citing specific elements from the documents",
+  "signals": ["exact phrase or concept from doc that supports this", "another signal", "..."],
+  "risks": "Brief note on the main risk or limitation of this classification"
+}`;
+
+  parts.unshift({ text: userPrompt });
+
+  try {
+    const rawJson = await callChatApi('classifyPatent', systemInstruction, parts, 'json');
+    // Parse and validate the JSON response
+    const parsed = JSON.parse(rawJson) as PatentClassification;
+    if (!parsed.recommendation || !parsed.confidence || !parsed.reasoning) {
+      throw new Error('Invalid classification response structure');
+    }
+    return parsed;
+  } catch (error) {
+    console.error('[gemini.ts] classifyPatentType error:', error);
+    // Return a safe default with low confidence if parsing fails
+    return {
+      recommendation: 'invention',
+      confidence: 'low',
+      reasoning: lang === 'es'
+        ? 'No se pudo analizar automáticamente. Por favor selecciona el tipo manualmente.'
+        : 'Automatic analysis failed. Please select the type manually.',
+      signals: [],
+      risks: lang === 'es'
+        ? 'Clasificación no disponible. Verifica tu conexión o intenta de nuevo.'
+        : 'Classification unavailable. Check your connection or try again.',
+    };
+  }
+};
 
 export const generateDraft = async (
   section: SectionDetail,

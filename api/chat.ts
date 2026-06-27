@@ -5,6 +5,7 @@ interface RequestBody {
     systemInstruction?: string;
     parts?: any[];
     model?: string;
+    responseFormat?: 'text' | 'json';
   };
 }
 
@@ -34,6 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // System instruction dinámica según la sección (proviene de geminiService.ts)
   const systemInstruction = payload.systemInstruction || "Eres un asistente de patentes.";
   const model = payload.model || 'gemini-2.5-flash';
+  const responseFormat = payload.responseFormat || 'text';
 
   try {
     // Llamada a Gemini API (REST v1beta) para evitar dependencias pesadas de @google/genai
@@ -53,9 +55,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
           ],
           generationConfig: {
-            temperature: 0.7,
+            temperature: responseFormat === 'json' ? 0.2 : 0.7,
             topP: 0.95,
             maxOutputTokens: 8192,
+            ...(responseFormat === 'json' && { responseMimeType: 'application/json' }),
           },
           safetySettings: [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },

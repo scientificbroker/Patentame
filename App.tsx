@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { PatentData, PatentSectionKey, PatentType, Language, UploadedFile } from './types';
 import { SectionInput } from './components/SectionInput';
-import { improveText, isAiAvailable, generateDraft } from './src/services/gemini';
+import { improveText, isAiAvailable, generateDraft, classifyPatentType, PatentClassification } from './src/services/gemini';
 import { SparklesIcon, DownloadIcon, UploadIcon, PencilIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, FileTextIcon, GithubIcon, InfoIcon } from './components/icons';
 import { STRINGS, getSectionDetails } from './data/i18n';
 import customLogo from './assets/logot.png';
@@ -56,6 +56,11 @@ const App: React.FC = () => {
     const [improvementData, setImprovementData] = useState<{ original: string, improved: string, section: PatentSectionKey } | null>(null);
     const [prediction, setPrediction] = useState<string | null>(null);
     const [isPredicting, setIsPredicting] = useState(false);
+
+    // Classification State
+    const [classification, setClassification] = useState<PatentClassification | null>(null);
+    const [isClassifying, setIsClassifying] = useState(false);
+    const [showManualSelect, setShowManualSelect] = useState(false);
 
     const SECTIONS = useMemo(() => getSectionDetails(lang), [lang]);
     const WIZARD_STEPS = useMemo(() => [
@@ -122,6 +127,25 @@ const App: React.FC = () => {
             } else {
                 alert('Unsupported file type. Please upload a .txt or .pdf file.');
             }
+            // Reset classification when new file is uploaded
+            setClassification(null);
+            setShowManualSelect(false);
+        }
+    };
+
+    const handleClassify = async () => {
+        if (!priorArtDoc && !inventionDescDoc) return;
+        setIsClassifying(true);
+        setClassification(null);
+        try {
+            const result = await classifyPatentType(priorArtDoc, inventionDescDoc, lang);
+            setClassification(result);
+            // Auto-apply the recommendation
+            setPatentType(result.recommendation);
+        } catch (error) {
+            console.error('Classification failed', error);
+        } finally {
+            setIsClassifying(false);
         }
     };
     
@@ -273,6 +297,17 @@ const App: React.FC = () => {
                         </div>
                     </div>
                 );
+                const hasDocuments = priorArtDoc !== null || inventionDescDoc !== null;
+                const confidenceColor = {
+                    high: 'text-green-400 bg-green-500/10 border-green-500/30',
+                    medium: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
+                    low: 'text-orange-400 bg-orange-500/10 border-orange-500/30',
+                };
+                const confidenceLabel = {
+                    es: { high: 'Alta', medium: 'Media', low: 'Baja' },
+                    en: { high: 'High', medium: 'Medium', low: 'Low' },
+                };
+
                 return (
                     <div>
                         <h2 className="text-3xl font-bold mb-2">{STRINGS[lang].upload.title}</h2>
@@ -285,17 +320,122 @@ const App: React.FC = () => {
                                <h4 className="text-sm font-semibold text-blue-300 mb-1">{lang === 'es' ? 'Límite de tamaño' : 'Size limit'}</h4>
                                <p className="text-sm text-blue-200/80">
                                  {lang === 'es' 
-                                  ? 'Para garantizar un procesamiento rápido y evitar errores de red, por favor asegúrate de que cada documento pese menos de 3.5 MB. Si tu archivo es más pesado, considera subir solo las páginas más relevantes.'
-                                  : 'To ensure fast processing and avoid network errors, please make sure each document is under 3.5 MB. If your file is larger, consider uploading only the relevant pages.'}
+                                  ? 'Para garantizar un procesamiento rápido y evitar errores de red, por favor asegúrate de que cada documento pese menos de 3.5 MB.'
+                                  : 'To ensure fast processing and avoid network errors, please make sure each document is under 3.5 MB.'}
                                </p>
                              </div>
                            </div>
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="space-y-6 mb-8">
                             <FileInput id="prior-art-file" label={STRINGS[lang].upload.priorArt} file={priorArtDoc} onChange={handleFileChange(setPriorArtDoc)} />
                             <FileInput id="invention-desc-file" label={STRINGS[lang].upload.inventionDesc} file={inventionDescDoc} onChange={handleFileChange(setInventionDescDoc)} />
                         </div>
+
+                        {/* AI Classification Panel */}
+                        {hasDocuments && !classification && !isClassifying && (
+                            <button
+                                onClick={handleClassify}
+                                className="w-full py-3 px-6 rounded-xl border-2 border-dashed border-purple-500/50 bg-purple-900/20 hover:bg-purple-900/40 hover:border-purple-400 transition-all duration-300 flex items-center justify-center gap-3 text-purple-300 font-medium group"
+                            >
+                                <SparklesIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                {lang === 'es' ? '✨ Analizar documentos con IA para recomendar tipo de patente' : '✨ Analyze documents with AI to recommend patent type'}
+                            </button>
+                        )}
+
+                        {isClassifying && (
+                            <div className="flex flex-col items-center justify-center py-8 gap-4">
+                                <div className="w-10 h-10 border-4 border-purple-500/30 border-t-purple-400 rounded-full animate-spin"></div>
+                                <p className="text-purple-300 text-sm animate-pulse">
+                                    {lang === 'es' ? 'Analizando documentos con IA... (~10 segundos)' : 'Analyzing documents with AI... (~10 seconds)'}
+                                </p>
+                            </div>
+                        )}
+
+                        {classification && !isClassifying && (
+                            <div className="mt-2 rounded-2xl border border-white/10 bg-black/30 backdrop-blur-sm overflow-hidden">
+                                {/* Header */}
+                                <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-purple-900/40 to-blue-900/40 border-b border-white/10">
+                                    <SparklesIcon className="w-5 h-5 text-purple-400" />
+                                    <h3 className="font-bold text-white">
+                                        {lang === 'es' ? 'Recomendación de la IA' : 'AI Recommendation'}
+                                    </h3>
+                                    <span className={`ml-auto text-xs font-semibold px-2.5 py-1 rounded-full border ${confidenceColor[classification.confidence]}`}>
+                                        {lang === 'es' ? 'Confianza: ' : 'Confidence: '}{confidenceLabel[lang][classification.confidence]}
+                                    </span>
+                                </div>
+
+                                {/* Recommendation badge */}
+                                <div className="px-5 pt-5 pb-3">
+                                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-lg mb-4 ${
+                                        classification.recommendation === 'invention'
+                                            ? 'bg-purple-500/20 border border-purple-500/40 text-purple-200'
+                                            : 'bg-blue-500/20 border border-blue-500/40 text-blue-200'
+                                    }`}>
+                                        {classification.recommendation === 'invention'
+                                            ? (lang === 'es' ? '🔬 Patente de Invención' : '🔬 Invention Patent')
+                                            : (lang === 'es' ? '🔧 Modelo de Utilidad' : '🔧 Utility Model')}
+                                    </div>
+
+                                    {/* Reasoning */}
+                                    <p className="text-gray-300 text-sm leading-relaxed mb-4">{classification.reasoning}</p>
+
+                                    {/* Signals */}
+                                    {classification.signals.length > 0 && (
+                                        <div className="mb-4">
+                                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                                                {lang === 'es' ? 'Señales detectadas en los documentos:' : 'Signals detected in documents:'}
+                                            </p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {classification.signals.map((signal, i) => (
+                                                    <span key={i} className="text-xs px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-gray-300">📌 {signal}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Risks */}
+                                    <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-lg px-4 py-3 mb-5">
+                                        <p className="text-xs text-yellow-300/80">⚠️ {classification.risks}</p>
+                                    </div>
+
+                                    {/* Action buttons */}
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <button
+                                            onClick={() => { setPatentType(classification.recommendation); setShowManualSelect(false); }}
+                                            className={`flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm transition-all ${
+                                                patentType === classification.recommendation
+                                                    ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                                                    : 'bg-purple-600/70 hover:bg-purple-600 text-white'
+                                            }`}
+                                        >
+                                            {patentType === classification.recommendation
+                                                ? (lang === 'es' ? '✓ Recomendación aplicada' : '✓ Recommendation applied')
+                                                : (lang === 'es' ? 'Aceptar recomendación' : 'Accept recommendation')}
+                                        </button>
+                                        <button
+                                            onClick={() => setShowManualSelect(s => !s)}
+                                            className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm border border-white/20 text-gray-300 hover:bg-white/5 transition-all"
+                                        >
+                                            {lang === 'es' ? 'Elegir manualmente' : 'Choose manually'}
+                                        </button>
+                                    </div>
+
+                                    {showManualSelect && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/10">
+                                            <button onClick={() => setPatentType('invention')} className={`p-4 rounded-xl border-2 text-left transition-all ${ patentType === 'invention' ? 'border-purple-500 bg-purple-900/30' : 'border-white/10 bg-white/5 hover:border-purple-500/50'}` }>
+                                                <p className="font-bold text-white text-sm">🔬 {lang === 'es' ? 'Patente de Invención' : 'Invention Patent'}</p>
+                                                <p className="text-xs text-gray-400 mt-1">{lang === 'es' ? 'Paso inventivo alto, 20 años' : 'High inventive step, 20 years'}</p>
+                                            </button>
+                                            <button onClick={() => setPatentType('utilityModel')} className={`p-4 rounded-xl border-2 text-left transition-all ${ patentType === 'utilityModel' ? 'border-blue-500 bg-blue-900/30' : 'border-white/10 bg-white/5 hover:border-blue-500/50'}` }>
+                                                <p className="font-bold text-white text-sm">🔧 {lang === 'es' ? 'Modelo de Utilidad' : 'Utility Model'}</p>
+                                                <p className="text-xs text-gray-400 mt-1">{lang === 'es' ? 'Mejora práctica, 10 años' : 'Practical improvement, 10 years'}</p>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
             case SECTIONS.length + 2: // Checklist
