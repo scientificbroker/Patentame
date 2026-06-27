@@ -54,7 +54,7 @@ const getPartsFromDocs = (
  * Returns the generated text or throws on error.
  */
 async function callChatApi(
-  action: 'generateDraft' | 'improveText' | 'classifyPatent',
+  action: 'generateDraft' | 'improveText' | 'classifyPatent' | 'extractKeywords',
   systemInstruction: string,
   parts: Part[],
   responseFormat: 'text' | 'json' = 'text'
@@ -167,6 +167,24 @@ Respond ONLY with this exact JSON structure (no markdown, no extra text):
         ? 'Clasificación no disponible. Verifica tu conexión o intenta de nuevo.'
         : 'Classification unavailable. Check your connection or try again.',
     };
+  }
+};
+
+export const generateSearchQuery = async (description: string, lang: Language): Promise<string> => {
+  const systemInstruction = `You are a patent search expert. Your task is to convert a user's natural language invention description into a Boolean search query optimized for the Europe PMC REST API (which searches EPO patents).
+Respond ONLY with the Boolean query string. Do not use quotes around single words unless it's an exact phrase. Use English keywords only.
+Example input: "Un dron que usa paneles solares y limpia agua"
+Example output: (drone OR UAV) AND ("solar panel" OR photovoltaic) AND (clean OR purify) AND water`;
+
+  const userPrompt = `Generate a Boolean search query for this invention description:\n\n"${description}"`;
+
+  try {
+    const rawResult = await callChatApi('extractKeywords', systemInstruction, [{ text: userPrompt }]);
+    // Clean up potential markdown or quotes
+    return rawResult.replace(/^```|```$/g, '').trim();
+  } catch (error) {
+    console.error('[gemini.ts] generateSearchQuery error:', error);
+    return description.split(' ').filter(w => w.length > 3).join(' AND ');
   }
 };
 
