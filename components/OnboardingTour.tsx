@@ -31,7 +31,9 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ run, onFinish, l
         disableBeacon: true,
       },
       {
-        target: '.tour-wizard-step-1',
+        target: '.tour-wizard-bar',
+        placement: 'bottom',
+        disableBeacon: true,
         content: (
           <div className="text-left">
             <h3 className="font-bold text-[#0a2540] mb-1">
@@ -39,14 +41,16 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ run, onFinish, l
             </h3>
             <p className="text-sm text-slate-600">
               {isEs
-                ? 'En el siguiente paso podrás describir tu invención y nuestra IA buscará patentes mundiales similares por ti.'
-                : 'In the next step you can describe your invention and our AI will search global patents for you.'}
+                ? 'En la barra superior verás los 10 pasos hacia tu solicitud conforme a la OMPI. Nuestra IA buscará patentes mundiales similares por ti y estructurará tu invención paso a paso.'
+                : 'In the top bar you will see the 10 steps toward your WIPO-compliant application. Our AI will search global patents for you and structure your invention step by step.'}
             </p>
           </div>
         ),
       },
       {
         target: '.tour-fto-chatbot',
+        placement: 'top-start',
+        disableBeacon: true,
         content: (
           <div className="text-left">
             <h3 className="font-bold text-[#0a2540] mb-1">
@@ -62,6 +66,8 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ run, onFinish, l
       },
       {
         target: '.tour-next-button',
+        placement: 'top',
+        disableBeacon: true,
         content: (
           <div className="text-left">
             <h3 className="font-bold text-[#0a2540] mb-1">
@@ -94,11 +100,30 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ run, onFinish, l
       steps={steps}
       run={run}
       continuous
-      scrollToFirstStep
+      disableBeacon={true}
+      beaconComponent={() => null}
+      disableScrolling={true}
+      disableOverlayClose={true}
       showProgress
       showSkipButton
       callback={handleJoyrideCallback}
+      floaterProps={{
+        disableAnimation: true,
+        options: {
+          preventOverflow: {
+            boundariesElement: 'window',
+            boundary: 'viewport',
+          },
+          flip: {
+            boundariesElement: 'window',
+            boundary: 'viewport',
+          },
+        },
+      }}
       styles={{
+        beacon: { display: 'none', width: 0, height: 0, opacity: 0 },
+        beaconInner: { display: 'none', width: 0, height: 0, opacity: 0 },
+        beaconOuter: { display: 'none', width: 0, height: 0, opacity: 0 },
         options: {
           primaryColor: '#8b5cf6', // purple-500
           textColor: '#334155',    // slate-700

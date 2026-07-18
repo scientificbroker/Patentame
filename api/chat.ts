@@ -61,41 +61,60 @@ IMPORTANTE: Tu respuesta debe ser un JSON válido, sin bloques de código (sin \
   const responseFormat = payload.responseFormat || 'text';
 
   try {
-    // Llamada a Gemini API (REST v1beta) para evitar dependencias pesadas de @google/genai
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: systemInstruction }]
-          },
-          contents: payload.contents || [
-            {
-              role: 'user',
-              parts: payload.parts
-            }
-          ],
-          generationConfig: {
-            temperature: responseFormat === 'json' ? 0.2 : 0.7,
-            topP: 0.95,
-            maxOutputTokens: 8192,
-            ...(responseFormat === 'json' && { responseMimeType: 'application/json' }),
-          },
-          safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-          ]
-        })
-      }
-    );
+    const requestBody = {
+      systemInstruction: {
+        parts: [{ text: systemInstruction }]
+      },
+      contents: payload.contents || [
+        {
+          role: 'user',
+          parts: payload.parts
+        }
+      ],
+      generationConfig: {
+        temperature: responseFormat === 'json' ? 0.2 : 0.7,
+        topP: 0.95,
+        maxOutputTokens: 8192,
+        ...(responseFormat === 'json' && { responseMimeType: 'application/json' }),
+      },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+      ]
+    };
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Gemini API error:', errorData);
-      return res.status(response.status).json({
-        error: 'Error en la API de Gemini',
+    let response: any = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        }
+      );
+
+      if (response.ok) break;
+
+      if (response.status === 429 || response.status >= 500) {
+        if (attempts < maxAttempts) {
+          console.warn(`[api/chat] Gemini API returned status ${response.status}. Retrying attempt ${attempts + 1}/${maxAttempts} in ${attempts * 3}s...`);
+          await new Promise(resolve => setTimeout(resolve, attempts * 3000));
+          continue;
+        }
+      }
+      break;
+    }
+
+    if (!response || !response.ok) {
+      const errorData = await response?.json().catch(() => ({}));
+      console.error('Gemini API error after retries:', errorData);
+      return res.status(response?.status || 500).json({
+        error: 'Error en la API de Gemini (Límite de peticiones o error temporal)',
         details: errorData
       });
     }

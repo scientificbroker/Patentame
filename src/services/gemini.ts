@@ -99,6 +99,11 @@ export interface PatentClassification {
   risks: string;
 }
 
+function cleanJsonString(str: string): string {
+  if (!str) return '';
+  return str.replace(/```(?:json)?\s*([\s\S]*?)\s*```/g, '$1').trim();
+}
+
 export const classifyPatentType = async (
   priorArtDoc: UploadedFile | null,
   inventionDescDoc: UploadedFile | null,
@@ -147,15 +152,15 @@ Respond ONLY with this exact JSON structure (no markdown, no extra text):
 
   try {
     const rawJson = await callChatApi('classifyPatent', systemInstruction, parts, 'json');
-    // Parse and validate the JSON response
-    const parsed = JSON.parse(rawJson) as PatentClassification;
+    const cleanedJson = cleanJsonString(rawJson);
+    const parsed = JSON.parse(cleanedJson) as PatentClassification;
     if (!parsed.recommendation || !parsed.confidence || !parsed.reasoning) {
       throw new Error('Invalid classification response structure');
     }
     return parsed;
-  } catch (error) {
+  } catch (error: any) {
     console.error('[gemini.ts] classifyPatentType error:', error);
-    // Return a safe default with low confidence if parsing fails
+    // Return a safe default with low confidence if parsing fails or quota hit
     return {
       recommendation: 'invention',
       confidence: 'low',
@@ -171,20 +176,32 @@ Respond ONLY with this exact JSON structure (no markdown, no extra text):
 };
 
 export const generateSearchQuery = async (description: string, lang: Language): Promise<string> => {
-  const systemInstruction = `You are a patent search expert. Your task is to convert a user's natural language invention description into a Boolean search query optimized for the Europe PMC REST API (which searches EPO patents).
-Respond ONLY with the Boolean query string. Do not use quotes around single words unless it's an exact phrase. Use English keywords only.
-Example input: "Un dron que usa paneles solares y limpia agua"
-Example output: (drone OR UAV) AND ("solar panel" OR photovoltaic) AND (clean OR purify) AND water`;
+  const systemInstruction = `You are a patent search expert. Your task is to convert a user's natural language invention description (often in Spanish) into a concise Boolean search query optimized for the Europe PMC REST API (which searches English patent abstracts).
+Respond ONLY with the Boolean query string.
+Rules:
+1. Translate all Spanish concepts into English technical keywords.
+2. Group synonyms using OR in parentheses: e.g. (microencapsulation OR encapsulation)
+3. Combine at most 2 or 3 distinct concepts using AND: e.g. (microencapsulation OR encapsulation) AND (alginate OR chitosan) AND food
+4. Do NOT create overly long AND chains (>3 ANDs). Keep it broad enough to find similar worldwide patents.`;
 
-  const userPrompt = `Generate a Boolean search query for this invention description:\n\n"${description}"`;
+  const userPrompt = `Generate a concise English Boolean search query for this invention description:\n\n"${description}"`;
 
   try {
     const rawResult = await callChatApi('extractKeywords', systemInstruction, [{ text: userPrompt }]);
-    // Clean up potential markdown or quotes
-    return rawResult.replace(/^```|```$/g, '').trim();
+    const cleaned = rawResult.replace(/^```|```$/g, '').trim();
+    if (cleaned && cleaned.length > 3) return cleaned;
+    throw new Error('Empty or invalid generated query');
   } catch (error) {
-    console.error('[gemini.ts] generateSearchQuery error:', error);
-    return description.split(' ').filter(w => w.length > 3).join(' AND ');
+    console.error('[gemini.ts] generateSearchQuery error or quota hit:', error);
+    // Smart fallback: extract technical words (length >= 5) and join with OR so Europe PMC guarantees matches
+    const stopwords = ['metodo', 'proceso', 'sistema', 'dispositivo', 'para', 'como', 'utilizando', 'sobre', 'alimentos', 'method', 'process', 'using', 'like', 'with'];
+    const words = description
+      .replace(/[()",.]/g, ' ')
+      .split(/\s+/)
+      .map(w => w.trim())
+      .filter(w => w.length >= 5 && !stopwords.includes(w.toLowerCase()));
+    
+    return words.slice(0, 4).join(' OR ');
   }
 };
 

@@ -66,6 +66,7 @@ const App: React.FC = () => {
     const [surveillanceMode, setSurveillanceMode] = useState<'upload' | 'assistant'>('assistant');
     const [ideaDescription, setIdeaDescription] = useState('');
     const [isSearching, setIsSearching] = useState(false);
+    const [searchError, setSearchError] = useState<string | null>(null);
     const [searchResults, setSearchResults] = useState<PatentResult[]>([]);
     const [selectedPatents, setSelectedPatents] = useState<Set<string>>(new Set());
 
@@ -182,14 +183,18 @@ const App: React.FC = () => {
     const handleSearchPatents = async () => {
         if (!ideaDescription.trim()) return;
         setIsSearching(true);
+        setSearchError(null);
         setSearchResults([]);
+        setHasSearched(false);
         try {
             const query = await generateSearchQuery(ideaDescription, lang);
             const results = await searchPatents(query);
             setSearchResults(results);
-        } catch (error) {
+            setHasSearched(true);
+        } catch (error: any) {
             console.error('Patent search failed:', error);
-            alert(lang === 'es' ? 'Fallo en la búsqueda de patentes. Intenta de nuevo.' : 'Patent search failed. Try again.');
+            setSearchError(error?.message || (lang === 'es' ? 'Fallo en la búsqueda de patentes. Intenta de nuevo.' : 'Patent search failed. Try again.'));
+            setHasSearched(true);
         } finally {
             setIsSearching(false);
         }
@@ -197,6 +202,7 @@ const App: React.FC = () => {
 
     const handleFtoSearch = async (query: string) => {
         setIsSearching(true);
+        setSearchError(null);
         setSearchResults([]);
         setStep(1);
         setSurveillanceMode('assistant');
@@ -204,9 +210,9 @@ const App: React.FC = () => {
         try {
             const results = await searchPatents(query);
             setSearchResults(results);
-        } catch (error) {
+        } catch (error: any) {
             console.error('FTO Search failed:', error);
-            alert(lang === 'es' ? 'Fallo en la búsqueda de patentes. Intenta de nuevo.' : 'Patent search failed. Try again.');
+            setSearchError(error?.message || (lang === 'es' ? 'Fallo en la búsqueda de patentes. Intenta de nuevo.' : 'Patent search failed. Try again.'));
         } finally {
             setIsSearching(false);
         }
@@ -430,6 +436,16 @@ const App: React.FC = () => {
                                         className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all outline-none resize-y min-h-[120px] mb-4"
                                     />
                                     
+                                    {searchError && (
+                                        <div className="mb-4 p-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-300 text-sm flex items-start gap-2">
+                                            <InfoIcon className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="font-semibold">{lang === 'es' ? 'Error al buscar patentes' : 'Error searching patents'}</p>
+                                                <p className="text-xs opacity-90 mt-0.5">{searchError}</p>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <button
                                         onClick={handleSearchPatents}
                                         disabled={isSearching || ideaDescription.trim().length < 10}
@@ -448,6 +464,22 @@ const App: React.FC = () => {
                                         )}
                                     </button>
                                 </div>
+
+                                {hasSearched && searchResults.length === 0 && !isSearching && !searchError && (
+                                    <div className="mt-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm flex items-start gap-3">
+                                        <div className="text-lg">⚠️</div>
+                                        <div>
+                                            <p className="font-semibold mb-1">
+                                                {lang === 'es' ? 'No se encontraron patentes directas para esta consulta.' : 'No direct patents found for this query.'}
+                                            </p>
+                                            <p className="text-xs opacity-90 leading-relaxed">
+                                                {lang === 'es' 
+                                                    ? 'Hemos intentado varias combinaciones técnicas, pero la base de datos no arrojó coincidencias exactas. Intenta simplificar la descripción (enfócate en solo 2 palabras clave principales) o continúa al siguiente paso para redactar tu solicitud.'
+                                                    : 'We tried multiple technical queries, but no exact hits returned. Try simplifying your description or proceed directly to drafting your application.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {searchResults.length > 0 && (
                                     <div className="mt-8">
@@ -718,7 +750,7 @@ const App: React.FC = () => {
                 </header>
                 
                 {/* Wizard Progress Bar */}
-                 <div className="w-full overflow-x-auto pb-4 mb-8">
+                 <div className="tour-wizard-bar w-full overflow-x-auto pb-4 mb-8">
                     <div className="flex items-start justify-between min-w-[800px]">
                         {WIZARD_STEPS.map((s, index) => (
                              <div className="flex-1 flex items-start" key={`${s.name}-${index}`}>
