@@ -91,12 +91,20 @@ export const isAiAvailable = (): boolean => true; // Always true — key lives o
 // Patent Classification
 // ---------------------------------------------------------------------------
 
+export interface PatentClassificationCriteria {
+  name: string;
+  status: 'pass' | 'warning' | 'info';
+  explanation: string;
+}
+
 export interface PatentClassification {
   recommendation: 'invention' | 'utilityModel';
   confidence: 'high' | 'medium' | 'low';
   reasoning: string;
   signals: string[];
   risks: string;
+  criteriaBreakdown?: PatentClassificationCriteria[];
+  strategicAdvice?: string;
 }
 
 function cleanJsonString(str: string): string {
@@ -114,22 +122,31 @@ export const classifyPatentType = async (
     inventionDescDoc
   );
 
-  const systemInstruction = `You are an expert patent attorney specialized in WIPO/OMPI/INDECOPI regulations. 
-Your task is to analyze technical documents and classify the invention type using strict legal criteria.
+  const systemInstruction = `You are an expert patent attorney specialized in WIPO/OMPI, Decision 486 (CAN), and INDECOPI legal regulations. 
+Your task is to analyze technical documents and classify the invention type using strict, comprehensive legal and technical criteria.
 You must respond ONLY with a valid JSON object, no markdown, no explanations outside the JSON.`;
 
   const userPrompt = `Analyze the following technical documents and determine whether this invention qualifies better as:
 - "invention": An Invention Patent — requires an absolute inventive step (non-obvious solution to a technical problem), 
-  can cover products, processes, methods, compositions, or systems. Protection: 20 years.
-- "utilityModel": A Utility Model — covers practical improvements to existing tools, devices, or objects 
-  (3-dimensional physical forms only). Lower inventive step required. Protection: 10 years.
+  can cover products, apparatuses, processes, methods, compositions, or systems. Protection: 20 years.
+- "utilityModel": A Utility Model — covers practical improvements to existing tools, devices, instruments, or mechanical objects 
+  (3-dimensional physical forms ONLY). Lower inventive step required (practical advantage). Protection: 10 years.
 
-Key criteria to evaluate:
-1. INVENTIVE STEP: Is the solution non-obvious to someone skilled in the art? (High step → invention; Low step → utilityModel)
-2. SUBJECT MATTER: Does it cover a process/method/composition/system? (→ invention) OR only a physical object shape? (→ utilityModel)
-3. NOVELTY: Is it an absolute new solution or an improvement of something existing?
-4. TECHNICAL SIGNALS: Look for keywords like "método", "proceso", "sistema", "composición", "síntesis" (→ invention) 
-   vs "mejora de", "dispositivo modificado", "herramienta", "utensilio", "forma" (→ utilityModel)
+Key legal criteria to evaluate rigorously according to WIPO/OMPI and Decision 486 (CAN/INDECOPI) standards:
+1. MATERIA PROTEGIBLE (SUBJECT MATTER / STATUTORY ELIGIBILITY):
+   - "invention": Covers products, machines, systems, chemical/biotech compositions, and crucially METHODS, PROCESSES, or ALGORITHMS with technical effect.
+   - "utilityModel": STRICTLY EXCLUDES methods, processes, chemical compositions, and pure software. Only protects 3-dimensional physical objects whose shape, configuration, or arrangement grants a practical advantage in operation or utility.
+2. ALTURA DEL NIVEL INVENTIVO (INVENTIVE STEP vs PRACTICAL UTILITY):
+   - "invention": Requires non-obviousness. A person skilled in the art combining existing prior art documents would NOT easily deduce the solution.
+   - "utilityModel": Requires lower inventive step (practical advantage/utility). A new physical arrangement of known parts that improves handling, functioning, or efficiency qualifies.
+3. EXCLUSIONES LEGALES (LEGAL EXCLUSIONS):
+   - Check if the subject matter falls into statutory exclusions (abstract ideas, mathematical methods, aesthetic creations, medical treatment methods).
+4. SUFICIENCIA DOCUMENTAL Y CALCULO DE CONFIANZA (DOCUMENTATION SUFFICIENCY & CONFIDENCE):
+   - "high": Both the actual invention description AND prior art are clear, allowing exact claim evaluation.
+   - "medium": The actual invention description is missing or incomplete, so classification is deduced from the general complexity and nature of the prior art / title.
+   - "low": Documents lack sufficient technical detail.
+5. ESTRATEGIA DE PATENTAMIENTO Y COBERTURA (STRATEGIC ADVICE):
+   - Suggest whether to file for Invention Patent (20 yrs protection, rigorous exam), Utility Model (10 yrs, faster grant), or a dual strategy.
 
 Documents to analyze:
 
@@ -145,10 +162,28 @@ Respond ONLY with this exact JSON structure (no markdown, no extra text):
   "confidence": "high" or "medium" or "low",
   "reasoning": "2-3 sentence legal justification citing specific elements from the documents",
   "signals": ["exact phrase or concept from doc that supports this", "another signal", "..."],
-  "risks": "Brief note on the main risk or limitation of this classification"
+  "risks": "Brief note on the main risk or limitation of this classification",
+  "criteriaBreakdown": [
+    {
+      "name": "Materia Protegible (Objeto vs. Procedimiento)",
+      "status": "pass" | "warning" | "info",
+      "explanation": "Brief assessment of subject matter eligibility based on documents"
+    },
+    {
+      "name": "Altura de Nivel Inventivo",
+      "status": "pass" | "warning" | "info",
+      "explanation": "Brief assessment of non-obviousness vs practical utility"
+    },
+    {
+      "name": "Suficiencia Documental",
+      "status": "pass" | "warning" | "info",
+      "explanation": "Assessment of how complete the provided invention description is"
+    }
+  ],
+  "strategicAdvice": "1-2 sentences with commercial/filing advice (e.g. 20-year coverage vs faster 10-year utility model grant)"
 }
 
-IMPORTANT LANGUAGE REQUIREMENT: You MUST write all text inside "reasoning", "signals", and "risks" strictly in ${lang === 'es' ? 'SPANISH (Español)' : 'ENGLISH'}. Do not output English text if the requested language is Spanish.`;
+IMPORTANT LANGUAGE REQUIREMENT: You MUST write all text inside "reasoning", "signals", "risks", "criteriaBreakdown" (names and explanations), and "strategicAdvice" strictly in ${lang === 'es' ? 'SPANISH (Español)' : 'ENGLISH'}. Do not output English text if the requested language is Spanish.`;
 
   parts.unshift({ text: userPrompt });
 
@@ -173,6 +208,10 @@ IMPORTANT LANGUAGE REQUIREMENT: You MUST write all text inside "reasoning", "sig
       risks: lang === 'es'
         ? 'Clasificación no disponible. Verifica tu conexión o intenta de nuevo.'
         : 'Classification unavailable. Check your connection or try again.',
+      criteriaBreakdown: [],
+      strategicAdvice: lang === 'es'
+        ? 'Consulta con un asesor o elige manualmente según si tu invento es un procedimiento (Inversión 20 años) o un dispositivo físico mejorado (Modelo de Utilidad 10 años).'
+        : 'Consult an advisor or choose manually depending on whether your invention is a process (Invention 20 yrs) or an improved physical device (Utility Model 10 yrs).'
     };
   }
 };

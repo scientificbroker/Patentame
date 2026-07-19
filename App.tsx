@@ -602,6 +602,45 @@ const App: React.FC = () => {
                                             {/* Reasoning */}
                                             <p className="text-gray-300 text-sm leading-relaxed mb-4">{classification.reasoning}</p>
 
+                                            {/* Criteria Breakdown Matrix */}
+                                            {classification.criteriaBreakdown && classification.criteriaBreakdown.length > 0 && (
+                                                <div className="mb-5 p-4 bg-black/40 border border-white/10 rounded-2xl">
+                                                    <p className="text-xs font-semibold text-purple-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                                        <span>📋</span> {lang === 'es' ? 'Matriz de Criterios Legales OMPI / INDECOPI' : 'WIPO / INDECOPI Legal Criteria Matrix'}
+                                                    </p>
+                                                    <div className="grid grid-cols-1 gap-2.5">
+                                                        {classification.criteriaBreakdown.map((item, idx) => (
+                                                            <div key={idx} className={`p-3 rounded-xl border flex items-start gap-3 text-xs ${
+                                                                item.status === 'pass' ? 'bg-green-500/10 border-green-500/30 text-green-200' :
+                                                                item.status === 'warning' ? 'bg-amber-500/10 border-amber-500/30 text-amber-200' :
+                                                                'bg-blue-500/10 border-blue-500/30 text-blue-200'
+                                                            }`}>
+                                                                <span className="text-sm shrink-0">
+                                                                    {item.status === 'pass' ? '✅' : item.status === 'warning' ? '⚠️' : 'ℹ️'}
+                                                                </span>
+                                                                <div>
+                                                                    <p className="font-bold mb-0.5">{item.name}</p>
+                                                                    <p className="text-gray-300/90 leading-relaxed">{item.explanation}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Strategic Advice */}
+                                            {classification.strategicAdvice && (
+                                                <div className="mb-5 p-4 bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-2xl flex items-start gap-3">
+                                                    <span className="text-lg shrink-0">💡</span>
+                                                    <div>
+                                                        <p className="text-xs font-bold text-purple-300 uppercase tracking-wide mb-1">
+                                                            {lang === 'es' ? 'Consejo Estratégico de Cobertura' : 'Strategic Filing Advice'}
+                                                        </p>
+                                                        <p className="text-xs text-purple-100/90 leading-relaxed">{classification.strategicAdvice}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {/* Signals */}
                                             {classification.signals.length > 0 && (
                                                 <div className="mb-4">
