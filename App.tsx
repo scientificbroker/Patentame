@@ -612,8 +612,12 @@ const App: React.FC = () => {
                                                     : 'bg-blue-500/20 border border-blue-500/40 text-blue-200'
                                             }`}>
                                                 {classification.recommendation === 'invention'
-                                                    ? (lang === 'es' ? '🔬 Patente de Invención' : '🔬 Invention Patent')
-                                                    : (lang === 'es' ? '🔧 Modelo de Utilidad' : '🔧 Utility Model')}
+                                                    ? (lang === 'es'
+                                                        ? (!inventionDescDoc || classification.confidence !== 'high' ? '🔬 Potencial Patente de Invención' : '🔬 Patente de Invención')
+                                                        : (!inventionDescDoc || classification.confidence !== 'high' ? '🔬 Potential Invention Patent' : '🔬 Invention Patent'))
+                                                    : (lang === 'es'
+                                                        ? (!inventionDescDoc || classification.confidence !== 'high' ? '🔧 Potencial Modelo de Utilidad' : '🔧 Modelo de Utilidad')
+                                                        : (!inventionDescDoc || classification.confidence !== 'high' ? '🔧 Potential Utility Model' : '🔧 Utility Model'))}
                                             </div>
 
                                             {/* Reasoning */}

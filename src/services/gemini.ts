@@ -161,7 +161,7 @@ Respond ONLY with this exact JSON structure (no markdown, no extra text):
 {
   "recommendation": "invention" or "utilityModel",
   "confidence": "high" or "medium" or "low",
-  "reasoning": "2-3 sentence legal justification citing specific elements from the documents and explaining how the presence or absence of the invention description affects the conclusion",
+  "reasoning": "2-3 sentence legal justification citing specific elements from the documents. IMPORTANT CONGRUENCE RULE: If the invention description document is missing or confidence is medium/low, you MUST congruently phrase the conclusion as a 'potencial patente de invención' or 'potencial modelo de utilidad' (in Spanish) / 'potential invention patent' or 'potential utility model' (in English) rather than making an absolute assertion without full documentation.",
   "signals": ["exact phrase or concept from doc that supports this", "another signal", "..."],
   "risks": "Brief note on the main risk or limitation of this classification",
   "criteriaBreakdown": [
