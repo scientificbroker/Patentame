@@ -74,7 +74,7 @@ export const generateDraft = async (
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'generateDraft',
-                payload: { systemInstruction, parts, model: 'gemini-2.5-flash' }
+                payload: { systemInstruction, parts, model: 'gemini-1.5-flash' }
             })
         });
 
@@ -145,7 +145,7 @@ export const improveText = async (
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'improveText',
-                payload: { systemInstruction, parts, model: 'gemini-2.5-flash' }
+                payload: { systemInstruction, parts, model: 'gemini-1.5-flash' }
             })
         });
 

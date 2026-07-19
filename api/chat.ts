@@ -58,7 +58,11 @@ DEBES responder ÚNICAMENTE en formato JSON con la siguiente estructura exacta:
 }
 IMPORTANTE: Tu respuesta debe ser un JSON válido, sin bloques de código (sin \`\`\`json).`;
   }
-  const model = payload.model || 'gemini-2.5-flash';
+  const requestedModel = payload.model || 'gemini-1.5-flash';
+  // Si pedían 2.5-flash (que no existe en la API pública REST v1beta), normalizar a 1.5-flash
+  const normalizedModel = (requestedModel === 'gemini-2.5-flash' || requestedModel === 'gemini-2.0-flash') ? 'gemini-1.5-flash' : requestedModel;
+  // Lista de modelos de respaldo en orden de estabilidad en Google Generative AI v1beta
+  const modelsToTry = Array.from(new Set([normalizedModel, 'gemini-1.5-flash', 'gemini-1.5-pro']));
   const responseFormat = payload.responseFormat || 'text';
 
   try {
@@ -85,30 +89,47 @@ IMPORTANTE: Tu respuesta debe ser un JSON válido, sin bloques de código (sin \
     };
 
     let response: any = null;
-    let attempts = 0;
-    const maxAttempts = 3;
 
-    while (attempts < maxAttempts) {
-      attempts++;
-      response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
+    for (const modelToTry of modelsToTry) {
+      let attempts = 0;
+      const maxAttempts = 2;
+
+      while (attempts < maxAttempts) {
+        attempts++;
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelToTry}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+          }
+        );
+
+        if (response.ok) {
+          break;
         }
-      );
 
-      if (response.ok) break;
-
-      if (response.status === 429 || response.status >= 500) {
-        if (attempts < maxAttempts) {
-          console.warn(`[api/chat] Gemini API returned status ${response.status}. Retrying attempt ${attempts + 1}/${maxAttempts} in ${attempts * 3}s...`);
-          await new Promise(resolve => setTimeout(resolve, attempts * 3000));
-          continue;
+        // Si es 404 (modelo no encontrado en esta API key/versión) o 400 (parámetro no soportado para este modelo),
+        // pasamos inmediatamente al siguiente modelo de respaldo en modelsToTry
+        if (response.status === 404 || response.status === 400) {
+          console.warn(`[api/chat] Model ${modelToTry} returned status ${response.status}, falling back to next model...`);
+          break;
         }
+
+        // Si es rate limit (429) o error de servidor (>= 500), reintentamos con espera exponencial
+        if (response.status === 429 || response.status >= 500) {
+          if (attempts < maxAttempts) {
+            console.warn(`[api/chat] Model ${modelToTry} returned status ${response.status}. Retrying attempt ${attempts + 1}/${maxAttempts} in ${attempts * 2}s...`);
+            await new Promise(resolve => setTimeout(resolve, attempts * 2000));
+            continue;
+          }
+        }
+        break;
       }
-      break;
+
+      if (response && response.ok) {
+        break;
+      }
     }
 
     if (!response || !response.ok) {
