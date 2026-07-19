@@ -146,7 +146,9 @@ Respond ONLY with this exact JSON structure (no markdown, no extra text):
   "reasoning": "2-3 sentence legal justification citing specific elements from the documents",
   "signals": ["exact phrase or concept from doc that supports this", "another signal", "..."],
   "risks": "Brief note on the main risk or limitation of this classification"
-}`;
+}
+
+IMPORTANT LANGUAGE REQUIREMENT: You MUST write all text inside "reasoning", "signals", and "risks" strictly in ${lang === 'es' ? 'SPANISH (Español)' : 'ENGLISH'}. Do not output English text if the requested language is Spanish.`;
 
   parts.unshift({ text: userPrompt });
 
