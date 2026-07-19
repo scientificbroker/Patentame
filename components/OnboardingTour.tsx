@@ -94,9 +94,10 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ run, onFinish, l
   };
 
   const isEs = lang === 'es';
+  const JoyrideAny = Joyride as any;
 
   return (
-    <Joyride
+    <JoyrideAny
       steps={steps}
       run={run}
       continuous
@@ -147,7 +148,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ run, onFinish, l
         tooltipContainer: {
           textAlign: 'left',
         }
-      }}
+      } as any}
       locale={{
         back: isEs ? 'Atrás' : 'Back',
         close: isEs ? 'Cerrar' : 'Close',

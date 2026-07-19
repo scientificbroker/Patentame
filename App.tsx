@@ -11,6 +11,7 @@ import customLogo from './assets/logot.png';
 import { FtoChatbot } from './components/FtoChatbot';
 import { OnboardingTour } from './components/OnboardingTour';
 import { DonationModal } from './components/DonationModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Heart } from 'lucide-react';
 
 
@@ -68,6 +69,7 @@ const App: React.FC = () => {
     const [isSearching, setIsSearching] = useState(false);
     const [searchError, setSearchError] = useState<string | null>(null);
     const [searchResults, setSearchResults] = useState<PatentResult[]>([]);
+    const [hasSearched, setHasSearched] = useState(false);
     const [selectedPatents, setSelectedPatents] = useState<Set<string>>(new Set());
 
     // Classification State
@@ -204,15 +206,18 @@ const App: React.FC = () => {
         setIsSearching(true);
         setSearchError(null);
         setSearchResults([]);
+        setHasSearched(false);
         setStep(1);
         setSurveillanceMode('assistant');
         setIdeaDescription(query); // Put the query in the box so they know what was searched
         try {
             const results = await searchPatents(query);
             setSearchResults(results);
+            setHasSearched(true);
         } catch (error: any) {
             console.error('FTO Search failed:', error);
             setSearchError(error?.message || (lang === 'es' ? 'Fallo en la búsqueda de patentes. Intenta de nuevo.' : 'Patent search failed. Try again.'));
+            setHasSearched(true);
         } finally {
             setIsSearching(false);
         }
@@ -773,7 +778,9 @@ const App: React.FC = () => {
                 </div>
 
                 <main className="w-full max-w-4xl mx-auto p-6 sm:p-10 bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl min-h-[400px] flex flex-col justify-center">
-                    {renderStepContent()}
+                    <ErrorBoundary key={step} onReset={() => setStep(0)}>
+                        {renderStepContent()}
+                    </ErrorBoundary>
                 </main>
                 
                  {improvementData && (
