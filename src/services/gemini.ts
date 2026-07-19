@@ -546,3 +546,105 @@ Perform the statutory descriptive sufficiency scan now in ${langToName(lang)}.`;
     };
   }
 };
+
+export interface TechnicalSectorResult {
+  macroSector: string;
+  specificSubfield: string;
+  technicalPurpose: string;
+  suggestedIpcCodes: Array<{ code: string; title: string; relevance: string }>;
+  formattedText: string;
+}
+
+export const structureTechnicalSector = async (
+  patentData: PatentData,
+  priorArtDoc: UploadedFile | null,
+  inventionDescDoc: UploadedFile | null,
+  selectedMacroSector: string,
+  lang: Language
+): Promise<TechnicalSectorResult> => {
+  const { parts, priorArtContext, inventionDescContext } = getPartsFromDocs(priorArtDoc, inventionDescDoc);
+
+  const systemInstruction = `You are a Senior Patent Classifier and Patent Attorney specializing in WIPO, PCT Rule 5.1(a)(i), and Decisión 486 (INDECOPI) statutory drafting.
+Your task is to structure and draft a comprehensive, highly rigorous "Technical Field / Sector Técnico" section and identify the exact International Patent Classification (IPC / CIP) codes.
+A statutory Technical Field section MUST NEVER be a brief single sentence. It requires precise technical depth:
+1. Macro-Sector Industrial: The broad scientific/industrial realm.
+2. Specific Technical Subfield: The exact niche, mechanism, or process where the invention operates.
+3. Industrial Purpose & Object: The concrete technical problem or operational objective addressed.
+4. Recommended IPC / CIP Codes: 2 to 4 precise International Patent Classification codes (Section, Class, Subclass, Group) with formal titles and explicit justification of relevance.
+
+You MUST respond ONLY in valid JSON format with the following exact structure:
+{
+  "macroSector": "e.g. Biotecnología e Ingeniería Biomédica",
+  "specificSubfield": "e.g. Sistemas de monitorización continua no invasiva y sensores optoelectrónicos",
+  "technicalPurpose": "e.g. Captura en tiempo real y filtrado digital de biomarcadores para diagnóstico temprano",
+  "suggestedIpcCodes": [
+    {
+      "code": "A61B 5/00",
+      "title": "Medición con fines de diagnóstico; Identificación de personas",
+      "relevance": "Cubre directamente los dispositivos y métodos de adquisición de señales fisiológicas del invento."
+    },
+    {
+      "code": "G16H 40/60",
+      "title": "TIC especialmente adaptadas para la gestión de recursos de asistencia sanitaria o para el manejo de equipos médicos",
+      "relevance": "Aplica a la arquitectura de transmisión y procesamiento remoto de datos en la nube."
+    }
+  ],
+  "formattedText": "La presente invención se enmarca en el campo técnico general de [Macro-Sector], y más específicamente se relaciona con [Subcampo Específico].\n\nEn particular, el objeto tecnológico de esta invención comprende [Objeto Técnico y Función Industrial], proporcionando ventajas operativas significativas en la industria de [Industria de aplicación].\n\nDe acuerdo con la Clasificación Internacional de Patentes (CIP / IPC), la presente innovación se sitúa de manera preferente en las clases técnicas: [Código 1 - Título] y [Código 2 - Título]."
+}
+Do not include markdown code block backticks outside the JSON string if possible.`;
+
+  const userPrompt = `Language: ${langToName(lang)}
+Invention Title: ${patentData.title || 'Not provided'}
+User Selected Macro-Sector Hint: ${selectedMacroSector || 'General / Auto-detect'}
+Current Technical Sector Draft: ${patentData.technicalSector || 'Empty'}
+Prior Art Context: ${priorArtContext}
+Invention Description Context: ${inventionDescContext}
+
+Structure and generate the comprehensive, multi-layered statutory Technical Sector and CIP/IPC classification now in ${langToName(lang)}.`;
+
+  parts.unshift({ text: userPrompt });
+
+  try {
+    const rawResult = await callChatApi('generateDraft', systemInstruction, parts, 'json');
+    let cleaned = rawResult.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(json)?\n?/, '').replace(/```$/, '').trim();
+    }
+    const parsed = JSON.parse(cleaned);
+    const macro = parsed.macroSector || (lang === 'es' ? 'Tecnología Aplicada e Ingeniería Industrial' : 'Applied Technology & Industrial Engineering');
+    const sub = parsed.specificSubfield || (patentData.title || 'Sistemas y dispositivos de mejora técnica');
+    const purpose = parsed.technicalPurpose || (lang === 'es' ? 'Optimización de procesos operativos y resolución de limitaciones del estado de la técnica' : 'Optimization of operational processes and solving prior art limitations');
+    const ipc: Array<{ code: string; title: string; relevance: string }> = Array.isArray(parsed.suggestedIpcCodes) ? parsed.suggestedIpcCodes : [];
+    
+    let formatted = parsed.formattedText;
+    if (!formatted || formatted.length < 50) {
+      formatted = lang === 'es'
+        ? `La presente invención se enmarca en el campo técnico general de ${macro}, y más específicamente se relaciona con ${sub}.\n\nEn particular, el objeto tecnológico principal de esta invención comprende ${purpose}, permitiendo una aplicación industrial eficiente, reproducible y con un claro salto inventivo frente a las tecnologías preexistentes.\n\nDe acuerdo con la Clasificación Internacional de Patentes (CIP / IPC), esta innovación corresponde preferentemente a los códigos y subclases técnicas aplicables a su mecanismo de acción y estructura principal.`
+        : `The present invention falls within the general technical field of ${macro}, and more specifically relates to ${sub}.\n\nIn particular, the main technological object of this invention comprises ${purpose}, enabling efficient, reproducible industrial application with a clear inventive step over pre-existing technologies.\n\nAccording to the International Patent Classification (IPC), this innovation preferably corresponds to the technical codes and subclasses applicable to its core mechanism and structure.`;
+    }
+
+    return {
+      macroSector: macro,
+      specificSubfield: sub,
+      technicalPurpose: purpose,
+      suggestedIpcCodes: ipc,
+      formattedText: formatted
+    };
+  } catch (error) {
+    console.error('[gemini.ts] structureTechnicalSector error:', error);
+    const fallbackMacro = selectedMacroSector || (lang === 'es' ? 'Ingeniería y Tecnología Industrial' : 'Engineering & Industrial Technology');
+    const fallbackText = lang === 'es'
+      ? `La presente invención se enmarca en el campo técnico general de ${fallbackMacro}, y más específicamente se relaciona con el desarrollo, optimización y aplicación práctica de ${patentData.title || 'dispositivos y métodos tecnológicos avanzados'}.\n\nEn particular, el objeto técnico principal de esta invención se enfoca en resolver las limitaciones y complejidades operativas observadas en el estado de la técnica actual, proporcionando mayor precisión, eficiencia y viabilidad industrial en los procesos del sector.\n\nDe acuerdo con la Clasificación Internacional de Patentes (CIP / IPC), esta tecnología es categorizable en las secciones correspondientes a su ámbito industrial de fabricación y uso directo.`
+      : `The present invention falls within the general technical field of ${fallbackMacro}, and more specifically relates to the development, optimization, and practical application of ${patentData.title || 'advanced technological devices and methods'}.\n\nIn particular, the main technical object of this invention focuses on overcoming the operational limitations and complexities observed in the current state of the art, providing enhanced precision, efficiency, and industrial viability in sector processes.\n\nAccording to the International Patent Classification (IPC), this technology is categorized within the sections corresponding to its industrial manufacturing and direct use domain.`;
+    
+    return {
+      macroSector: fallbackMacro,
+      specificSubfield: patentData.title || 'Desarrollo Tecnológico',
+      technicalPurpose: lang === 'es' ? 'Resolución de limitaciones técnicas preexistentes' : 'Solving pre-existing technical limitations',
+      suggestedIpcCodes: [
+        { code: 'G06F / H04L / A61B', title: lang === 'es' ? 'Clasificación sugerida según rama industrial' : 'Suggested classification based on industrial branch', relevance: lang === 'es' ? 'Se recomienda afinar con la búsqueda FTO de patentes.' : 'Recommended to refine using FTO patent search.' }
+      ],
+      formattedText: fallbackText
+    };
+  }
+};

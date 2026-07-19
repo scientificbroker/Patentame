@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PencilIcon, QuestionMarkIcon, InfoIcon } from './icons';
-import { isAiAvailable, generateClaimTree, scanDescriptiveSufficiency, type ClaimTreeResult, type SufficiencyScanResult } from '../src/services/gemini';
+import { isAiAvailable, generateClaimTree, scanDescriptiveSufficiency, structureTechnicalSector, type ClaimTreeResult, type SufficiencyScanResult, type TechnicalSectorResult } from '../src/services/gemini';
 import type { PatentData, UploadedFile, Language } from '../types';
 
 interface SectionInputProps {
@@ -42,6 +42,11 @@ export const SectionInput: React.FC<SectionInputProps> = ({
   const [isScanningSufficiency, setIsScanningSufficiency] = useState(false);
   const [sufficiencyReport, setSufficiencyReport] = useState<SufficiencyScanResult | null>(null);
 
+  // State for Technical Sector & IPC Classifier (id === 'technicalSector')
+  const [isStructuringSector, setIsStructuringSector] = useState(false);
+  const [sectorReport, setSectorReport] = useState<TechnicalSectorResult | null>(null);
+  const [selectedMacroSector, setSelectedMacroSector] = useState<string>('');
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Tab' && prediction && !value) {
       e.preventDefault();
@@ -72,6 +77,19 @@ export const SectionInput: React.FC<SectionInputProps> = ({
       console.error(err);
     } finally {
       setIsScanningSufficiency(false);
+    }
+  };
+
+  const handleStructureSector = async () => {
+    if (!patentData || isStructuringSector) return;
+    setIsStructuringSector(true);
+    try {
+      const result = await structureTechnicalSector(patentData, priorArtDoc || null, inventionDescDoc || null, selectedMacroSector, lang as Language);
+      setSectorReport(result);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsStructuringSector(false);
     }
   };
 
@@ -133,6 +151,28 @@ export const SectionInput: React.FC<SectionInputProps> = ({
               </button>
             )}
 
+            {id === 'technicalSector' && (
+              <button
+                onClick={handleStructureSector}
+                disabled={isStructuringSector || !patentData}
+                className="flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-700 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-purple-500 hover:to-indigo-600 disabled:opacity-50 transition-all transform hover:scale-105"
+              >
+                {isStructuringSector ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {lang === 'es' ? 'Clasificando CIP/OMPI...' : 'Classifying IPC/WIPO...'}
+                  </>
+                ) : (
+                  <>
+                    <span>🔬 {lang === 'es' ? 'Estructurar y Clasificar CIP con IA' : 'AI Structure & Classify IPC'}</span>
+                  </>
+                )}
+              </button>
+            )}
+
             <button
               onClick={onImprove}
               disabled={isImproving || !value}
@@ -156,6 +196,112 @@ export const SectionInput: React.FC<SectionInputProps> = ({
           </div>
         )}
       </div>
+
+      {/* Technical Sector & IPC Classifier Panel */}
+      {id === 'technicalSector' && (
+        <div className="mb-6 p-5 bg-gradient-to-br from-indigo-950/40 via-purple-900/20 to-indigo-900/30 border border-indigo-500/30 rounded-2xl shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-3 border-b border-indigo-500/20">
+            <div>
+              <h4 className="font-bold text-base text-indigo-300 flex items-center gap-2">
+                <span>🔬 {lang === 'es' ? 'Estructurador Estándar OMPI / Regla 5.1 PCT' : 'WIPO / PCT Rule 5.1 Structure Builder'}</span>
+              </h4>
+              <p className="text-xs text-indigo-200/80 mt-0.5">
+                {lang === 'es'
+                  ? 'Redacta los 3 niveles jerárquicos formales del campo técnico y asigna códigos de Clasificación Internacional (CIP/IPC).'
+                  : 'Drafts the 3 formal hierarchical layers of the technical field and assigns International Patent Classification (IPC) codes.'}
+              </p>
+            </div>
+            {!sectorReport && (
+              <span className="text-xs text-purple-300 bg-purple-900/30 border border-purple-500/30 px-3 py-1.5 rounded-lg">
+                {lang === 'es' ? '👈 Elige un Macro-Sector abajo o pulsa "Estructurar con IA"' : '👈 Select a Macro-Sector or click AI Structure'}
+              </span>
+            )}
+          </div>
+
+          {/* Macro-Sector Pills */}
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-indigo-200 uppercase tracking-wider mb-2.5">
+              {lang === 'es' ? 'Sugerencia: Selecciona el Macro-Sector Industrial para enfocar la clasificación de la IA:' : 'Hint: Select the Industrial Macro-Sector to guide AI classification:'}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'Biotecnología & Salud', label: '🧬 Biotecnología & Salud' },
+                { id: 'Software, IA & Datos', label: '💻 Software, IA & Datos' },
+                { id: 'Mecánica & Robótica', label: '⚙️ Mecánica & Robótica' },
+                { id: 'Energía & Medio Ambiente', label: '⚡ Energía & Medio Ambiente' },
+                { id: 'Química & Materiales', label: '🧪 Química & Materiales' },
+                { id: 'Electrónica & Telecomunicaciones', label: '📡 Electrónica & Telecomunicaciones' },
+                { id: 'Agroindustria & Alimentos', label: '🌾 Agroindustria & Alimentos' }
+              ].map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setSelectedMacroSector(selectedMacroSector === s.id ? '' : s.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                    selectedMacroSector === s.id
+                      ? 'bg-indigo-600 border-indigo-400 text-white shadow-md transform scale-105'
+                      : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Structured Result Display */}
+          {sectorReport && (
+            <div className="mt-4 pt-4 border-t border-indigo-500/30 space-y-4 animate-fadeIn">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-3 bg-black/30 rounded-xl border border-indigo-500/30">
+                  <span className="text-[11px] text-indigo-400 font-bold uppercase tracking-wider block">{lang === 'es' ? 'Macro-Sector Industrial' : 'Macro-Sector'}</span>
+                  <p className="text-sm text-white font-semibold mt-1 leading-snug">{sectorReport.macroSector}</p>
+                </div>
+                <div className="p-3 bg-black/30 rounded-xl border border-purple-500/30">
+                  <span className="text-[11px] text-purple-400 font-bold uppercase tracking-wider block">{lang === 'es' ? 'Subcampo Técnico Específico' : 'Technical Subfield'}</span>
+                  <p className="text-sm text-white font-semibold mt-1 leading-snug">{sectorReport.specificSubfield}</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-black/30 rounded-xl border border-cyan-500/30">
+                <span className="text-[11px] text-cyan-400 font-bold uppercase tracking-wider block">{lang === 'es' ? 'Objeto y Función en la Industria' : 'Industrial Object & Purpose'}</span>
+                <p className="text-xs text-gray-300 mt-1 leading-relaxed">{sectorReport.technicalPurpose}</p>
+              </div>
+
+              {sectorReport.suggestedIpcCodes.length > 0 && (
+                <div>
+                  <span className="text-xs font-bold text-purple-300 uppercase tracking-wider block mb-2.5">{lang === 'es' ? '🏷️ Códigos de Clasificación Internacional de Patentes (CIP / IPC) Recomendados:' : '🏷️ Recommended International Patent Classification (IPC) Codes:'}</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {sectorReport.suggestedIpcCodes.map((ipc, idx) => (
+                      <div key={idx} className="p-3 bg-purple-950/40 border border-purple-500/40 rounded-xl shadow-inner">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="px-2.5 py-0.5 bg-purple-600 border border-purple-400 text-white text-xs font-mono font-bold rounded-md shadow">
+                            {ipc.code}
+                          </span>
+                        </div>
+                        <p className="text-xs font-bold text-purple-200 leading-tight mb-1">{ipc.title}</p>
+                        <p className="text-[11px] text-gray-300 leading-snug">{ipc.relevance}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onValueChange(sectorReport.formattedText);
+                  }}
+                  className="flex items-center px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-lg border border-emerald-400/30 transition transform hover:scale-105"
+                >
+                  <span>📋 {lang === 'es' ? 'Aplicar Redacción Estructurada al Editor' : 'Apply Structured Draft to Editor'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Claim Tree Visualizer Panel */}
       {id === 'claims' && claimTree && (
