@@ -589,6 +589,23 @@ const App: React.FC = () => {
 
                                         {/* Recommendation badge */}
                                         <div className="px-5 pt-5 pb-3">
+                                            {/* Missing Invention Description Scrutiny Notice */}
+                                            {!inventionDescDoc && (
+                                                <div className="mb-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-start gap-3">
+                                                    <span className="text-xl shrink-0">⚠️</span>
+                                                    <div>
+                                                        <p className="text-xs font-bold text-amber-300 uppercase tracking-wide mb-1">
+                                                            {lang === 'es' ? 'Escrutinio Parcial (Falta Memoria Técnica del Invento)' : 'Partial Scrutiny (Missing Invention Memory)'}
+                                                        </p>
+                                                        <p className="text-xs text-amber-200/90 leading-relaxed">
+                                                            {lang === 'es'
+                                                                ? 'Has subido únicamente tus antecedentes técnicos (vigilancia). Para someter TU propuesta al escrutinio formal de Novedad Mundial y No Obviedad, es necesario cargar el archivo "Descripción de la invención / Memoria técnica". Esta recomendación infiere la categoría legal en función de la materia y complejidad tecnológica del campo según los antecedentes cargados.'
+                                                                : 'You uploaded only technical background (surveillance). To subject YOUR proposal to formal scrutiny of World Novelty and Non-Obviousness, please upload the "Invention Description / Technical Memory" file. This suggestion infers the category based on the subject matter and technical complexity of the uploaded prior art.'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-lg mb-4 ${
                                                 classification.recommendation === 'invention'
                                                     ? 'bg-purple-500/20 border border-purple-500/40 text-purple-200'

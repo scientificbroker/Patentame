@@ -136,17 +136,18 @@ Key legal criteria to evaluate rigorously according to WIPO/OMPI and Decision 48
 1. MATERIA PROTEGIBLE (SUBJECT MATTER / STATUTORY ELIGIBILITY):
    - "invention": Covers products, machines, systems, chemical/biotech compositions, and crucially METHODS, PROCESSES, or ALGORITHMS with technical effect.
    - "utilityModel": STRICTLY EXCLUDES methods, processes, chemical compositions, and pure software. Only protects 3-dimensional physical objects whose shape, configuration, or arrangement grants a practical advantage in operation or utility.
-2. ALTURA DEL NIVEL INVENTIVO (INVENTIVE STEP vs PRACTICAL UTILITY):
-   - "invention": Requires non-obviousness. A person skilled in the art combining existing prior art documents would NOT easily deduce the solution.
+2. ALTURA DEL NIVEL INVENTIVO / NO OBVIEDAD (INVENTIVE STEP vs PRACTICAL UTILITY):
+   - "invention": Requires non-obviousness (principio de no obviedad). A person skilled in the art combining existing prior art documents would NOT easily deduce the solution.
    - "utilityModel": Requires lower inventive step (practical advantage/utility). A new physical arrangement of known parts that improves handling, functioning, or efficiency qualifies.
-3. EXCLUSIONES LEGALES (LEGAL EXCLUSIONS):
+3. NOVEDAD MUNDIAL Y APLICACION INDUSTRIAL (NOVELTY & INDUSTRIAL APPLICABILITY):
+   - Check novelty against the provided prior art. Check if the solution is industrially applicable.
+   - NOTE: If the invention description document is NOT provided, explicitly note inside the criteria explanations that full scrutiny of novelty and non-obviousness for the user's specific invention cannot be completed without the invention description, and that the assessment is inferred from the technical field and prior art complexity.
+4. EXCLUSIONES LEGALES (LEGAL EXCLUSIONS):
    - Check if the subject matter falls into statutory exclusions (abstract ideas, mathematical methods, aesthetic creations, medical treatment methods).
-4. SUFICIENCIA DOCUMENTAL Y CALCULO DE CONFIANZA (DOCUMENTATION SUFFICIENCY & CONFIDENCE):
-   - "high": Both the actual invention description AND prior art are clear, allowing exact claim evaluation.
+5. SUFICIENCIA DOCUMENTAL Y CALCULO DE CONFIANZA (DOCUMENTATION SUFFICIENCY & CONFIDENCE):
+   - "high": Both the actual invention description AND prior art are clear, allowing exact scrutiny of novelty, inventive step, and industrial applicability.
    - "medium": The actual invention description is missing or incomplete, so classification is deduced from the general complexity and nature of the prior art / title.
    - "low": Documents lack sufficient technical detail.
-5. ESTRATEGIA DE PATENTAMIENTO Y COBERTURA (STRATEGIC ADVICE):
-   - Suggest whether to file for Invention Patent (20 yrs protection, rigorous exam), Utility Model (10 yrs, faster grant), or a dual strategy.
 
 Documents to analyze:
 
@@ -160,24 +161,34 @@ Respond ONLY with this exact JSON structure (no markdown, no extra text):
 {
   "recommendation": "invention" or "utilityModel",
   "confidence": "high" or "medium" or "low",
-  "reasoning": "2-3 sentence legal justification citing specific elements from the documents",
+  "reasoning": "2-3 sentence legal justification citing specific elements from the documents and explaining how the presence or absence of the invention description affects the conclusion",
   "signals": ["exact phrase or concept from doc that supports this", "another signal", "..."],
   "risks": "Brief note on the main risk or limitation of this classification",
   "criteriaBreakdown": [
     {
-      "name": "Materia Protegible (Objeto vs. Procedimiento)",
+      "name": "Escrutinio 1: Novedad Mundial (Novelty Check)",
       "status": "pass" | "warning" | "info",
-      "explanation": "Brief assessment of subject matter eligibility based on documents"
+      "explanation": "Detailed check of whether the invention features are anticipated by prior art. If invention description is missing, clearly state that absolute novelty cannot be contrasted without the technical memory."
     },
     {
-      "name": "Altura de Nivel Inventivo",
+      "name": "Escrutinio 2: Nivel Inventivo / Principio de No Obviedad (Inventive Step Check)",
       "status": "pass" | "warning" | "info",
-      "explanation": "Brief assessment of non-obviousness vs practical utility"
+      "explanation": "Detailed check of non-obviousness vs practical utility. If invention description is missing, state that non-obviousness scrutiny of the specific proposal is pending the technical memory."
     },
     {
-      "name": "Suficiencia Documental",
+      "name": "Escrutinio 3: Aplicación Industrial (Industrial Applicability)",
       "status": "pass" | "warning" | "info",
-      "explanation": "Assessment of how complete the provided invention description is"
+      "explanation": "Assessment of industrial feasibility and reproducibility."
+    },
+    {
+      "name": "Materia Protegible (Elegibilidad Legal)",
+      "status": "pass" | "warning" | "info",
+      "explanation": "Assessment of subject matter (Process/Method/System vs 3D Physical Object shape)"
+    },
+    {
+      "name": "Suficiencia Documental (Impacto en Confianza)",
+      "status": "pass" | "warning" | "info",
+      "explanation": "Explanation of how the presence/absence of the invention description directly impacts confidence"
     }
   ],
   "strategicAdvice": "1-2 sentences with commercial/filing advice (e.g. 20-year coverage vs faster 10-year utility model grant)"
