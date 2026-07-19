@@ -537,16 +537,46 @@ const App: React.FC = () => {
                                                         <div className={`mt-1 w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${selectedPatents.has(patent.id) ? 'bg-green-500 border-green-500' : 'border-gray-500'}`}>
                                                             {selectedPatents.has(patent.id) && <CheckIcon className="w-3.5 h-3.5 text-white" />}
                                                         </div>
-                                                        <div>
-                                                            <a href={patent.link} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="font-semibold text-blue-300 hover:underline text-sm block mb-1">
+                                                        <div className="flex-1 min-w-0">
+                                                            {/* Document Type Badge & Year */}
+                                                            <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                                                                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                                                                    patent.documentType === 'patent' ? 'bg-purple-500/20 border-purple-500/40 text-purple-300' :
+                                                                    patent.documentType === 'article' ? 'bg-blue-500/20 border-blue-500/40 text-blue-300' :
+                                                                    patent.documentType === 'thesis' ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' :
+                                                                    'bg-gray-500/20 border-gray-500/40 text-gray-300'
+                                                                }`}>
+                                                                    {patent.documentTypeLabel || '🔬 Patente / Documento Técnico'}
+                                                                </span>
+                                                                {patent.year && patent.year !== 'N/A' && (
+                                                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/10 text-gray-300">
+                                                                        📅 {patent.year}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Title */}
+                                                            <a href={patent.link} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="font-semibold text-blue-300 hover:underline text-sm block mb-1.5 leading-snug">
                                                                 {patent.title}
                                                             </a>
-                                                            <div className="flex gap-2 text-xs text-gray-500 mb-2">
-                                                                <span>{patent.id}</span>
+
+                                                            {/* ID & Assignee */}
+                                                            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400 mb-2.5 font-medium">
+                                                                <span className="text-white font-mono bg-white/10 px-1.5 py-0.5 rounded">{patent.id}</span>
                                                                 <span>•</span>
-                                                                <span>{patent.assignee}</span>
+                                                                <span className="truncate max-w-[280px]">{patent.assignee}</span>
                                                             </div>
-                                                            <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed">
+
+                                                            {/* CIP (Clasificación Internacional de Patentes) Badge */}
+                                                            {patent.cipCode && (
+                                                                <div className="mb-2.5 p-2 rounded-lg bg-black/40 border border-purple-500/30 flex items-start gap-2 text-xs">
+                                                                    <span className="text-purple-400 font-bold shrink-0 mt-0.5">🏷️ CIP [{patent.cipCode}]:</span>
+                                                                    <span className="text-purple-200/90 text-[11px] leading-tight">{patent.cipDescription || 'Clasificación Internacional de Patentes'}</span>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Abstract */}
+                                                            <p className="text-xs text-gray-300/90 line-clamp-3 leading-relaxed">
                                                                 {patent.abstract}
                                                             </p>
                                                         </div>

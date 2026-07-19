@@ -6,6 +6,11 @@ export interface PatentResult {
   inventor: string;
   assignee: string;
   link: string;
+  documentType?: 'patent' | 'article' | 'thesis' | 'other';
+  documentTypeLabel?: string;
+  cipCode?: string;
+  cipDescription?: string;
+  year?: string;
 }
 
 export const searchPatents = async (query: string): Promise<PatentResult[]> => {
