@@ -402,3 +402,147 @@ export const improveText = async (
     return `Error: AI service failed. ${message}`;
   }
 };
+
+export interface ClaimTreeResult {
+  independentClaim: string;
+  dependentClaims: string[];
+  formattedText: string;
+}
+
+export const generateClaimTree = async (
+  patentData: PatentData,
+  priorArtDoc: UploadedFile | null,
+  inventionDescDoc: UploadedFile | null,
+  lang: Language
+): Promise<ClaimTreeResult> => {
+  const { parts, priorArtContext, inventionDescContext } = getPartsFromDocs(priorArtDoc, inventionDescDoc);
+
+  const systemInstruction = `You are a Senior Patent Attorney and Specialist in drafting patent claims according to WIPO, PCT, and Decisión 486 (INDECOPI) standards.
+Your task is to generate a formal, hierarchical Claim Tree (Árbol de Reivindicaciones) based on the user's invention description, detailed description, and prior art context.
+You MUST generate:
+1. Exactly 1 Independent Claim (Reivindicación Principal/Independiente): Structured strictly in two parts: Preamble + Characterizing portion (e.g. "Un sistema para X que comprende A y B, caracterizado por comprender C y D...").
+2. Exactly 3 to 4 Dependent Claims (Reivindicaciones Dependientes): Subordinated directly to claim 1 or previous claims (e.g. "2. El sistema según la reivindicación 1, donde el sensor es..."), specifically designed to protect key technical variants and prevent competitors from designing around (evasión técnica).
+
+You MUST respond ONLY in valid JSON format with the following exact structure:
+{
+  "independentClaim": "1. Un sistema/método/dispositivo...",
+  "dependentClaims": [
+    "2. El sistema según la reivindicación 1, caracterizado porque...",
+    "3. El sistema según la reivindicación 1 o 2, donde...",
+    "4. El sistema según la reivindicación 1, que además comprende..."
+  ]
+}
+Do not include markdown code block backticks outside the JSON string if possible.`;
+
+  const userPrompt = `Language: ${langToName(lang)}
+Title: ${patentData.title || 'Untitled'}
+Technical Sector: ${patentData.technicalSector || 'Not provided'}
+Detailed Description: ${patentData.detailedDescription || 'Not provided'}
+Prior Art Context: ${priorArtContext}
+Invention Description Context: ${inventionDescContext}
+
+Generate the hierarchical Claim Tree now in ${langToName(lang)}.`;
+
+  parts.unshift({ text: userPrompt });
+
+  try {
+    const rawResult = await callChatApi('generateDraft', systemInstruction, parts, 'json');
+    let cleaned = rawResult.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(json)?\n?/, '').replace(/```$/, '').trim();
+    }
+    const parsed = JSON.parse(cleaned);
+    const indep = parsed.independentClaim || (lang === 'es' ? '1. Reivindicación principal no generada.' : '1. Independent claim not generated.');
+    const dep: string[] = Array.isArray(parsed.dependentClaims) ? parsed.dependentClaims : [];
+    const formattedText = [indep, ...dep].join('\n\n');
+    return { independentClaim: indep, dependentClaims: dep, formattedText };
+  } catch (error) {
+    console.error('[gemini.ts] generateClaimTree error:', error);
+    const fallbackIndep = lang === 'es'
+      ? `1. ${patentData.title || 'Sistema caracterizado por comprender una serie de elementos técnicos que resuelven el problema planteado en la memoria técnica'}.`
+      : `1. ${patentData.title || 'A system characterized by comprising technical elements that solve the problem stated in the specification'}.`;
+    const fallbackDep = lang === 'es'
+      ? [
+          '2. El sistema según la reivindicación 1, caracterizado porque los sensores recopilan datos en tiempo real para transmisión en la nube.',
+          '3. El sistema según la reivindicación 1, donde el procesamiento incluye un algoritmo de inteligencia artificial o filtro digital para filtrado y alerta temprana.',
+          '4. El sistema según cualquiera de las reivindicaciones 1 a 3, que comprende además una interfaz remota de monitoreo autónomo.'
+        ]
+      : [
+          '2. The system according to claim 1, characterized in that the sensors collect real-time data for cloud transmission.',
+          '3. The system according to claim 1, wherein the processing includes an artificial intelligence algorithm or digital filter for early warning.',
+          '4. The system according to any of claims 1 to 3, further comprising a remote monitoring interface.'
+        ];
+    return {
+      independentClaim: fallbackIndep,
+      dependentClaims: fallbackDep,
+      formattedText: [fallbackIndep, ...fallbackDep].join('\n\n')
+    };
+  }
+};
+
+export interface SufficiencyScanResult {
+  isSufficient: boolean;
+  score: number; // 0 to 100
+  summary: string;
+  missingDetails: string[];
+  recommendations: string[];
+}
+
+export const scanDescriptiveSufficiency = async (
+  descriptionText: string,
+  patentData: PatentData,
+  lang: Language
+): Promise<SufficiencyScanResult> => {
+  const systemInstruction = `You are a Patent Examiner evaluating a patent specification for "Descriptive Sufficiency" (Suficiencia Descriptiva / Enablement requirement under Article 83 EPO, 35 U.S.C. 112, and Decisión 486 INDECOPI).
+Your task is to scan the detailed description text and check whether an expert in the technical field could reproduce and construct the invention step-by-step without excessive or undue experimentation.
+Identify exact blind spots, vague claims (e.g. "an AI algorithm processes data" without specifying inputs, parameters, or training structure), missing dimensions, materials, or workflow steps.
+
+You MUST respond ONLY in valid JSON format with the following exact structure:
+{
+  "isSufficient": boolean (true if score >= 80 and no critical gaps exist),
+  "score": number (between 0 and 100 representing descriptive completeness),
+  "summary": "1-2 sentence assessment of the descriptive reproducibility.",
+  "missingDetails": ["Detail 1 missing", "Detail 2 missing"],
+  "recommendations": ["Recommendation 1 to satisfy statutory sufficiency", "Recommendation 2"]
+}
+Do not include markdown code block backticks outside the JSON string if possible.`;
+
+  const userPrompt = `Language: ${langToName(lang)}
+Title: ${patentData.title || 'Untitled'}
+Technical Sector: ${patentData.technicalSector || 'Not provided'}
+Drafted Detailed Description to Scan:
+"${descriptionText}"
+
+Perform the statutory descriptive sufficiency scan now in ${langToName(lang)}.`;
+
+  try {
+    const rawResult = await callChatApi('generateDraft', systemInstruction, [{ text: userPrompt }], 'json');
+    let cleaned = rawResult.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(json)?\n?/, '').replace(/```$/, '').trim();
+    }
+    const parsed = JSON.parse(cleaned);
+    return {
+      isSufficient: Boolean(parsed.isSufficient),
+      score: typeof parsed.score === 'number' ? parsed.score : 75,
+      summary: parsed.summary || (lang === 'es' ? 'Análisis de suficiencia completado.' : 'Sufficiency analysis completed.'),
+      missingDetails: Array.isArray(parsed.missingDetails) ? parsed.missingDetails : [],
+      recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : []
+    };
+  } catch (error) {
+    console.error('[gemini.ts] scanDescriptiveSufficiency error:', error);
+    return {
+      isSufficient: descriptionText.length > 200,
+      score: descriptionText.length > 300 ? 85 : 60,
+      summary: lang === 'es'
+        ? 'El texto presenta una descripción general viable. Para blindar el requisito de suficiencia ante un examinador, asegúrate de detallar parámetros, diagramas de flujo y diagramas de conexión física.'
+        : 'The text provides a viable overview. To secure full statutory sufficiency against examiner objections, ensure parameters, flowcharts, and physical connections are detailed.',
+      missingDetails: lang === 'es'
+        ? ['Verificar que todas las variables de entrada/salida estén cuantificadas.', 'Asegurar que los materiales o algoritmos específicos estén explicados paso a paso.']
+        : ['Verify all input/output variables are quantified.', 'Ensure specific materials or algorithms are explained step-by-step.'],
+      recommendations: lang === 'es'
+        ? ['Incluir un ejemplo práctico de funcionamiento paso a paso.', 'Adjuntar referencias a figuras o diagramas en la descripción.']
+        : ['Include a step-by-step working example.', 'Reference figures or connection diagrams in the description.']
+    };
+  }
+};

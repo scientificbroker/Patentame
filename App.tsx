@@ -321,31 +321,51 @@ const App: React.FC = () => {
         const sections = getSectionDetails(lang);
         const title = patentData.title || "Untitled Patent Application";
         const disclaimer = STRINGS[lang].welcome.disclaimer;
+        let counter = 1;
 
         let htmlContent = `
             <html>
                 <head>
-                    <title>Patent Application: ${title}</title>
+                    <title>Borrador de Patente: ${title}</title>
                     <style>
-                        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; padding: 2rem; color: #111; }
-                        h1 { font-size: 26px; color: #000; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 24px; }
-                        h2 { font-size: 20px; color: #222; margin-top: 32px; margin-bottom: 12px; }
-                        p { white-space: pre-wrap; word-wrap: break-word; text-align: justify; }
-                        .footer { margin-top: 40px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9px; color: #888; text-align: center; }
+                        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; padding: 2.5rem; color: #111; max-width: 850px; margin: 0 auto; }
+                        .header-box { border: 2px solid #333; padding: 18px; margin-bottom: 28px; background-color: #f8fafc; border-radius: 6px; }
+                        .header-title { font-size: 16px; font-weight: 800; text-transform: uppercase; margin-bottom: 6px; color: #0f172a; letter-spacing: 0.5px; }
+                        .header-meta { font-size: 13px; color: #475569; margin-bottom: 4px; }
+                        h1 { font-size: 24px; color: #000; border-bottom: 2px solid #000; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px; font-weight: 800; }
+                        h2 { font-size: 16px; color: #1e293b; margin-top: 28px; margin-bottom: 12px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+                        p { margin-bottom: 14px; text-align: justify; word-wrap: break-word; }
+                        .para-num { font-weight: 700; color: #64748b; margin-right: 8px; font-family: monospace; }
+                        .footer { margin-top: 50px; padding-top: 15px; border-top: 1px solid #ccc; font-size: 10px; color: #64748b; text-align: center; }
                     </style>
                 </head>
                 <body>
+                    <div class="header-box">
+                        <div class="header-title">EXPEDIENTE TÉCNICO BORRADOR (ESTÁNDAR OMPI / DECISIÓN 486)</div>
+                        <div class="header-meta"><b>Modalidad de Protección Solicitada:</b> ${patentType === 'invention' ? 'Patente de Invención (20 años)' : 'Modelo de Utilidad (10 años)'}</div>
+                        <div class="header-meta"><b>Aviso Legal:</b> Documento orientativo redactado para estructuración técnica e inspección de novedad. No constituye documento oficial ni formulario legal de Indecopi u otras oficinas.</div>
+                    </div>
                     <h1>${title}</h1>
         `;
 
         sections.forEach(section => {
-            const sectionContent = patentData[section.id];
-            // Only include sections that have content or are not optional
+            const sectionContent = (patentData[section.id] || '').trim();
             if (sectionContent || section.id !== 'detailedDescription') {
-                 htmlContent += `
-                    <h2>${section.title}</h2>
-                    <p>${sectionContent || 'Not provided.'}</p>
-                `;
+                 htmlContent += `<h2>${section.title}</h2>`;
+                 if (section.id === 'claims' || section.id === 'title' || section.id === 'abstract') {
+                     const lines = sectionContent ? sectionContent.split(/\n+/) : ['Not provided.'];
+                     lines.forEach(line => {
+                         if (line.trim()) htmlContent += `<p>${line.trim()}</p>`;
+                     });
+                 } else {
+                     const lines = sectionContent ? sectionContent.split(/\n+/) : ['Not provided.'];
+                     lines.forEach(line => {
+                         if (line.trim()) {
+                             const numStr = String(counter++).padStart(4, '0');
+                             htmlContent += `<p><span class="para-num">[${numStr}]</span> ${line.trim()}</p>`;
+                         }
+                     });
+                 }
             }
         });
 
@@ -362,13 +382,84 @@ const App: React.FC = () => {
             printWindow.document.write(htmlContent);
             printWindow.document.close();
             printWindow.focus();
-            // Give browser time to render before prompting print
-             setTimeout(() => {
+            setTimeout(() => {
                 printWindow.print();
-             }, 500);
+            }, 500);
         } else {
             alert(STRINGS[lang].checklist.popupBlocker);
         }
+    };
+
+    const handleDownloadDoc = () => {
+        const sections = getSectionDetails(lang);
+        const title = patentData.title || "Untitled Patent Application";
+        const disclaimer = STRINGS[lang].welcome.disclaimer;
+        let counter = 1;
+
+        let docHtml = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset="utf-8">
+                    <title>${title}</title>
+                    <style>
+                        body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #111; padding: 20px; }
+                        .header-box { border: 2px solid #444; padding: 15px; margin-bottom: 25px; background-color: #f9f9f9; }
+                        .header-title { font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; color: #111; }
+                        .header-meta { font-size: 13px; color: #444; margin-bottom: 4px; }
+                        h1 { font-size: 22px; color: #000; border-bottom: 2px solid #000; padding-bottom: 8px; margin-top: 30px; margin-bottom: 20px; font-weight: bold; }
+                        h2 { font-size: 16px; color: #222; margin-top: 25px; margin-bottom: 12px; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+                        p { margin-bottom: 14px; text-align: justify; }
+                        .para-num { font-weight: bold; color: #555; margin-right: 8px; font-family: monospace; }
+                        .footer { margin-top: 50px; padding-top: 15px; border-top: 1px solid #aaa; font-size: 10px; color: #666; text-align: center; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header-box">
+                        <div class="header-title">EXPEDIENTE TÉCNICO BORRADOR (ESTÁNDAR OMPI / DECISIÓN 486)</div>
+                        <div class="header-meta"><b>Modalidad de Protección Solicitada:</b> ${patentType === 'invention' ? 'Patente de Invención (20 años)' : 'Modelo de Utilidad (10 años)'}</div>
+                        <div class="header-meta"><b>Aviso Legal:</b> Documento orientativo redactado para estructuración técnica e inspección de novedad. No constituye documento oficial ni formulario legal de Indecopi u otras oficinas.</div>
+                    </div>
+                    <h1>${title}</h1>
+        `;
+
+        sections.forEach(section => {
+            const sectionContent = (patentData[section.id] || '').trim();
+            if (sectionContent || section.id !== 'detailedDescription') {
+                 docHtml += `<h2>${section.title}</h2>`;
+                 if (section.id === 'claims' || section.id === 'title' || section.id === 'abstract') {
+                     const lines = sectionContent ? sectionContent.split(/\n+/) : ['Not provided.'];
+                     lines.forEach(line => {
+                         if (line.trim()) docHtml += `<p>${line.trim()}</p>`;
+                     });
+                 } else {
+                     const lines = sectionContent ? sectionContent.split(/\n+/) : ['Not provided.'];
+                     lines.forEach(line => {
+                         if (line.trim()) {
+                             const numStr = String(counter++).padStart(4, '0');
+                             docHtml += `<p><span class="para-num">[${numStr}]</span> ${line.trim()}</p>`;
+                         }
+                     });
+                 }
+            }
+        });
+
+        docHtml += `
+                    <div class="footer">
+                        <p>${disclaimer}</p>
+                    </div>
+                </body>
+            </html>
+        `;
+
+        const blob = new Blob(['\ufeff', docHtml], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'solicitud'}_borrador_ompi.doc`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
     
     const handleNext = () => setStep(s => {
@@ -880,7 +971,7 @@ const App: React.FC = () => {
                     <div>
                         <h2 className="text-3xl font-bold mb-2">{STRINGS[lang].checklist.title}</h2>
                         <p className="text-gray-400 mb-6">{STRINGS[lang].checklist.subtitle}</p>
-                        <ul className="space-y-3">
+                        <ul className="space-y-3 mb-8">
                             {STRINGS[lang].checklist.items.map((item: string, index: number) => (
                                 <li key={index} className="flex items-start p-3 bg-white/5 rounded-lg border border-white/10">
                                     <CheckIcon className="w-5 h-5 text-green-400 mr-4 mt-1 shrink-0" />
@@ -888,6 +979,30 @@ const App: React.FC = () => {
                                 </li>
                             ))}
                         </ul>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                            <button
+                                onClick={handleDownloadPdf}
+                                className="flex items-center justify-center p-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold shadow-xl border border-purple-400/30 transition-all transform hover:scale-105"
+                            >
+                                <DownloadIcon className="w-6 h-6 mr-3 shrink-0" />
+                                <div className="text-left">
+                                    <div className="text-base font-extrabold">{lang === 'es' ? 'Descargar Expediente PDF' : 'Download PDF Draft'}</div>
+                                    <div className="text-xs text-purple-200 font-normal">{lang === 'es' ? 'Con párrafos numerados [0001] e insignias OMPI' : 'With numbered paragraphs [0001] & WIPO format'}</div>
+                                </div>
+                            </button>
+                            <button
+                                onClick={handleDownloadDoc}
+                                className="flex items-center justify-center p-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold shadow-xl border border-blue-400/30 transition-all transform hover:scale-105"
+                            >
+                                <FileTextIcon className="w-6 h-6 mr-3 shrink-0" />
+                                <div className="text-left">
+                                    <div className="text-base font-extrabold">{lang === 'es' ? 'Exportar a Word (.DOC)' : 'Export to Word (.DOC)'}</div>
+                                    <div className="text-xs text-blue-200 font-normal">{lang === 'es' ? 'Editable para presentación final ante abogados/oficina' : 'Editable format for legal & office filing'}</div>
+                                </div>
+                            </button>
+                        </div>
+
                          <div className="mt-6 p-3 bg-purple-900/10 border border-purple-500/20 rounded-lg text-sm text-purple-200/90 flex items-start">
                             <InfoIcon className="h-5 w-5 mr-3 text-purple-400 shrink-0 mt-0.5" />
                             <p>{STRINGS[lang].checklist.wipoTip}</p>
