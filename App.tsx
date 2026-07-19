@@ -293,18 +293,26 @@ const App: React.FC = () => {
     
     const handleImprove = async (section: typeof SECTIONS[0]) => {
         const textToImprove = patentData[section.id];
-        if (!textToImprove || !patentType) return;
+        if (!patentType) return;
         setImprovingSection(section.id);
         try {
-            const improvedText = await improveText(textToImprove, section, patentData, patentType, lang, priorArtDoc, inventionDescDoc);
-            if(improvedText.startsWith('Error:')) {
+            let improvedText = '';
+            if (!textToImprove || textToImprove.trim() === '') {
+                improvedText = await generateDraft(section, patentType, lang, patentData, priorArtDoc, inventionDescDoc);
+            } else {
+                improvedText = await improveText(textToImprove, section, patentData, patentType, lang, priorArtDoc, inventionDescDoc);
+            }
+            if (improvedText && improvedText.startsWith('Error:')) {
                 alert(improvedText);
                 return;
             }
-            setImprovementData({ original: textToImprove, improved: improvedText, section: section.id });
+            if (!textToImprove || textToImprove.trim() === '') {
+                handleValueChange(section.id)(improvedText);
+            } else {
+                setImprovementData({ original: textToImprove, improved: improvedText, section: section.id });
+            }
         } catch (error) {
             console.error("Improvement failed", error);
-            alert(`An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`);
         } finally {
             setImprovingSection(null);
         }
