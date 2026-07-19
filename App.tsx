@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { PatentData, PatentSectionKey, PatentType, Language, UploadedFile } from './types';
 import { SectionInput } from './components/SectionInput';
-import { improveText, isAiAvailable, generateDraft, classifyPatentType, PatentClassification, generateSearchQuery } from './src/services/gemini';
+import { improveText, isAiAvailable, generateDraft, generateInventionMemoryDraft, classifyPatentType, PatentClassification, generateSearchQuery } from './src/services/gemini';
 import { searchPatents, PatentResult } from './src/services/api';
 import { SparklesIcon, DownloadIcon, UploadIcon, PencilIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, FileTextIcon, GithubIcon, InfoIcon } from './components/icons';
 import { STRINGS, getSectionDetails } from './data/i18n';
@@ -76,6 +76,13 @@ const App: React.FC = () => {
     const [classification, setClassification] = useState<PatentClassification | null>(null);
     const [isClassifying, setIsClassifying] = useState(false);
     const [showManualSelect, setShowManualSelect] = useState(false);
+
+    // AI Technical Memory Assistant State
+    const [showAiMemoryHelper, setShowAiMemoryHelper] = useState(false);
+    const [aiMemoryProblem, setAiMemoryProblem] = useState('');
+    const [aiMemorySolution, setAiMemorySolution] = useState('');
+    const [aiMemoryAdvantage, setAiMemoryAdvantage] = useState('');
+    const [isGeneratingMemory, setIsGeneratingMemory] = useState(false);
 
     // Onboarding State
     const [runOnboarding, setRunOnboarding] = useState(false);
@@ -179,6 +186,34 @@ const App: React.FC = () => {
             console.error('Classification failed', error);
         } finally {
             setIsClassifying(false);
+        }
+    };
+
+    const handleGenerateAiMemory = async () => {
+        if (!aiMemoryProblem || !aiMemorySolution || !aiMemoryAdvantage) return;
+        setIsGeneratingMemory(true);
+        try {
+            const generatedContent = await generateInventionMemoryDraft(
+                aiMemoryProblem,
+                aiMemorySolution,
+                aiMemoryAdvantage,
+                lang
+            );
+            if (generatedContent) {
+                setInventionDescDoc({
+                    name: lang === 'es' ? 'memoria_tecnica_ia.txt' : 'ai_technical_memory.txt',
+                    content: generatedContent,
+                    size: generatedContent.length
+                });
+                setShowAiMemoryHelper(false);
+                setAiMemoryProblem('');
+                setAiMemorySolution('');
+                setAiMemoryAdvantage('');
+            }
+        } catch (error) {
+            console.error('Failed to generate AI technical memory', error);
+        } finally {
+            setIsGeneratingMemory(false);
         }
     };
 
@@ -551,7 +586,95 @@ const App: React.FC = () => {
 
                                 <div className="space-y-6 mb-8">
                                     <FileInput id="prior-art-file" label={STRINGS[lang].upload.priorArt} file={priorArtDoc} onChange={handleFileChange(setPriorArtDoc)} />
-                                    <FileInput id="invention-desc-file" label={STRINGS[lang].upload.inventionDesc} file={inventionDescDoc} onChange={handleFileChange(setInventionDescDoc)} />
+                                    <div>
+                                        <FileInput id="invention-desc-file" label={STRINGS[lang].upload.inventionDesc} file={inventionDescDoc} onChange={handleFileChange(setInventionDescDoc)} />
+                                        {!inventionDescDoc && (
+                                            <div className="mt-2.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowAiMemoryHelper(s => !s)}
+                                                    className="text-xs font-semibold text-purple-300 hover:text-purple-200 flex items-center gap-2 transition-colors py-2 px-3 rounded-xl bg-purple-900/30 border border-purple-500/30 w-full justify-center shadow-sm hover:border-purple-500/60"
+                                                >
+                                                    <SparklesIcon className="w-4 h-4 text-purple-400 shrink-0" />
+                                                    {lang === 'es'
+                                                        ? '✨ ¿Aún no tienes archivo de Memoria Técnica? Redáctala con IA aquí en 3 breves pasos para obtener Certeza 100%'
+                                                        : '✨ No Invention Description file? Draft it here with AI in 3 steps for 100% Certainty'}
+                                                </button>
+
+                                                {showAiMemoryHelper && (
+                                                    <div className="mt-3 p-5 bg-black/80 border border-purple-500/40 rounded-2xl space-y-4 animate-fadeIn shadow-2xl">
+                                                        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                                                            <h4 className="text-xs font-bold text-white flex items-center gap-2 uppercase tracking-wider">
+                                                                <span>🤖</span> {lang === 'es' ? 'Asistente IA de Redacción para Escrutinio' : 'AI Drafting Assistant for Scrutiny'}
+                                                            </h4>
+                                                            <button onClick={() => setShowAiMemoryHelper(false)} className="text-gray-400 hover:text-white text-sm font-bold">✕</button>
+                                                        </div>
+                                                        <p className="text-xs text-gray-300 leading-relaxed">
+                                                            {lang === 'es'
+                                                                ? 'Responde brevemente estas 3 preguntas clave y la IA estructurará formalmente tu Memoria Técnica para adjuntarla y someter tu invento al escrutinio exacto de Novedad Mundial y No Obviedad.'
+                                                                : 'Briefly answer these 3 key questions and AI will formally structure your Technical Memory to attach it and subject your invention to exact scrutiny of World Novelty and Non-Obviousness.'}
+                                                        </p>
+                                                        <div className="space-y-3.5 text-left">
+                                                            <div>
+                                                                <label className="block text-xs font-semibold text-purple-300 mb-1.5">
+                                                                    1. {lang === 'es' ? '¿Qué problema técnico concreto resuelve tu propuesta?' : 'What specific technical problem does your proposal solve?'}
+                                                                </label>
+                                                                <textarea
+                                                                    rows={2}
+                                                                    value={aiMemoryProblem}
+                                                                    onChange={e => setAiMemoryProblem(e.target.value)}
+                                                                    placeholder={lang === 'es' ? 'Ej: La muerte repentina y falta de monitoreo en tiempo real de temperatura o sonido en colmenas remotas...' : 'Ex: Lack of real-time acoustic and temperature monitoring in remote beehives...'}
+                                                                    className="w-full bg-white/5 border border-white/15 rounded-xl p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-semibold text-purple-300 mb-1.5">
+                                                                    2. {lang === 'es' ? '¿En qué consiste tu solución y cómo funciona paso a paso?' : 'What is your solution and how does it work step by step?'}
+                                                                </label>
+                                                                <textarea
+                                                                    rows={3}
+                                                                    value={aiMemorySolution}
+                                                                    onChange={e => setAiMemorySolution(e.target.value)}
+                                                                    placeholder={lang === 'es' ? 'Ej: Sistema que integra sensores acústicos piezoeléctricos e IoT procesando frecuencias en la nube para detectar anomalías...' : 'Ex: System with piezoelectric acoustic sensors and IoT that analyzes frequencies in the cloud...'}
+                                                                    className="w-full bg-white/5 border border-white/15 rounded-xl p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-semibold text-purple-300 mb-1.5">
+                                                                    3. {lang === 'es' ? '¿Qué ventaja o diferencia inventiva tiene frente a lo que ya existe?' : 'What inventive difference/advantage does it have over prior art?'}
+                                                                </label>
+                                                                <textarea
+                                                                    rows={2}
+                                                                    value={aiMemoryAdvantage}
+                                                                    onChange={e => setAiMemoryAdvantage(e.target.value)}
+                                                                    placeholder={lang === 'es' ? 'Ej: Clasifica el estado de la colmena mediante IA sin necesidad de abrir la caja ni alterar el microclima de las abejas...' : 'Ex: Classifies hive status via AI without opening the box or disturbing bees...'}
+                                                                    className="w-full bg-white/5 border border-white/15 rounded-xl p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
+                                                                />
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleGenerateAiMemory}
+                                                                disabled={!aiMemoryProblem.trim() || !aiMemorySolution.trim() || !aiMemoryAdvantage.trim() || isGeneratingMemory}
+                                                                className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold text-xs flex justify-center items-center gap-2 shadow-lg transition-all"
+                                                            >
+                                                                {isGeneratingMemory ? (
+                                                                    <>
+                                                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                                        {lang === 'es' ? 'Sintetizando y adjuntando Memoria Técnica...' : 'Synthesizing and attaching Technical Memory...'}
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <SparklesIcon className="w-4 h-4" />
+                                                                        {lang === 'es' ? '✨ Generar y Adjuntar Memoria Técnica al Escrutinio' : '✨ Generate & Attach Technical Memory for Scrutiny'}
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* AI Classification Panel */}

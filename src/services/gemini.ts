@@ -310,6 +310,38 @@ export const generateDraft = async (
   }
 };
 
+export const generateInventionMemoryDraft = async (
+  problem: string,
+  solution: string,
+  advantage: string,
+  lang: Language
+): Promise<string> => {
+  const systemInstruction = `You are an expert patent attorney specialized in WIPO/OMPI and Decision 486 (CAN/INDECOPI). Your task is to take a user's brief answers about their invention and synthesize a formal, clear Technical Memory / Invention Description (Memoria Técnica de la Invención) structured specifically to enable exact legal scrutiny of Novelty, Inventive Step (Non-obviousness), and Industrial Applicability. Respond ONLY with the synthesized technical memory text in ${lang === 'es' ? 'Spanish (Español)' : 'English'}.`;
+
+  const userPrompt = `
+Synthesize a formal Technical Memory (Memoria Técnica de la Invención) from these core inputs provided by the inventor:
+1. TECHNICAL PROBLEM SOLVED: "${problem}"
+2. DETAILED SOLUTION / HOW IT WORKS STEP BY STEP: "${solution}"
+3. TECHNICAL ADVANTAGE / DIFFERENCE VS PRIOR ART: "${advantage}"
+
+Please organize the output into 3 clear technical sections:
+- Campo Técnico y Problema a Resolver
+- Descripción Detallada de la Solución e Implementación
+- Ventajas Técnicas y Nivel Inventivo frente al Estado de la Técnica
+
+Make sure the language is precise and rigorous so an AI or patent attorney can immediately scrutinize its statutory criteria.
+`;
+
+  try {
+    return await callChatApi('generateDraft', systemInstruction, [{ text: userPrompt }]);
+  } catch (error) {
+    console.error('[gemini.ts] generateInventionMemoryDraft error:', error);
+    return lang === 'es'
+      ? `Campo Técnico y Problema:\n${problem}\n\nSolución Técnica:\n${solution}\n\nVentajas:\n${advantage}`
+      : `Technical Field & Problem:\n${problem}\n\nTechnical Solution:\n${solution}\n\nAdvantages:\n${advantage}`;
+  }
+};
+
 export const improveText = async (
   textToImprove: string,
   section: SectionDetail,
