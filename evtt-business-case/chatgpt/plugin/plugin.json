@@ -1,0 +1,6 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "evtt-business-case",
+  "version": "2.0.0",
+  "description": "Evaluación, valorización y diseño de negociación para activos tecnológicos e intangibles, con trazabilidad de evidencia y supuestos."
+}

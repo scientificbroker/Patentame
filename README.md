@@ -22,6 +22,7 @@
   <a href="https://ai.studio/apps/drive/1DxYjkYkgfUHX9_brDGF_SHYIyJ82pSCX">▶️ Probar en Google AI Studio</a> ·
   <a href="#-instalación">Instalación</a> ·
   <a href="#-skill-vigilancia-tecnológica">Skill VT</a> ·
+  <a href="#-skill-evtt--business-case">Skill EVTT</a> ·
   <a href="#-scripts">Scripts</a>
 </p>
 
@@ -41,6 +42,7 @@ El ecosistema está pensado para tres momentos clave: **redactar** (Patentame), 
 |------------|------------------------|
 | **Patentame** | Redacción guiada de solicitudes de patentes y modelos de utilidad. Reduce tiempo de borrador y mejora la consistencia con estándares internacionales. |
 | **Skill VT** | Agente especializado en análisis de patentes, vigilancia tecnológica e inteligencia competitiva. Funciona en Claude, ChatGPT, Gemini y Cursor. |
+| **Skill EVTT** | Evaluación y Vigilancia Tecnológica (Business Case). Convierte invenciones en modelos de negocio financieros y Excel estructurados (Claude, ChatGPT, Gemini). |
 | **Scripts Python** | Plantillas ejecutables para procesos de vigilancia tecnológica y planes de búsqueda. Sirven como base documental para equipos y auditorías. |
 
 ---
@@ -121,6 +123,29 @@ Un gestor tecnológico necesita respuestas rápidas sobre el panorama competitiv
 | **Otros LLM** | Incluir contenido como prompt de sistema |
 
 El skill se encuentra en `patentes-vigilancia-tecnologica/SKILL.md`.
+
+---
+
+## 📊 Skill — EVTT (Evaluación y Vigilancia Tecnológica / Business Case)
+
+El módulo de **Evaluación y Vigilancia Tecnológica (EVTT)** transforma la investigación técnica, las memorias de patentes y los análisis FTO en **casos de negocio financieros estructurados**. Permite evaluar la viabilidad de comercialización, estimar valoración económica, analizar TRL/CRL y modelar flujos de caja y escenarios de inversión (incluye script Python para generar un modelo financiero de 10 pestañas en Excel).
+
+Cuenta con paquetes de instalación y fuentes portables para las tres plataformas líderes en [`evtt-business-case/`](evtt-business-case/):
+
+### Utilidad estratégica
+
+- **Valoración económica y financiera:** Modelado de inversión, CAPEX, OPEX, proyección de ingresos y análisis de escenarios.
+- **Nivel de madurez tecnológica:** Evaluación conjunta de TRL (*Technology Readiness Level*) y CRL (*Commercial Readiness Level*).
+- **Exportación a Excel automatizada:** Script `build_evtt_v2.py` que crea un libro de trabajo completo con 10 pestañas estructuradas.
+- **Preparación para comités e inversores:** Generación de resúmenes ejecutivos (*One-Pagers*) para fondos de transferencia y comités de patentes.
+
+### Integración por plataforma
+
+| Plataforma | Paquete descargable | Modo de implementación |
+|------------|---------------------|------------------------|
+| **Anthropic Claude** | [`downloads/EVTT_BusinessCase_Claude_Instalacion.zip`](evtt-business-case/downloads/EVTT_BusinessCase_Claude_Instalacion.zip) | En tu Project de Claude, añade `claude/SKILL_EVTT_v2.md` a las **Custom Instructions** y adjunta `claude/METODOLOGIA_EVTT.md` y `claude/SPEC_EXCEL_EVTT.md` como archivos de proyecto. |
+| **OpenAI ChatGPT / Codex** | [`downloads/EVTT_Business_Case_ChatGPT_Instalacion.zip`](evtt-business-case/downloads/EVTT_Business_Case_ChatGPT_Instalacion.zip) | En el editor de Custom GPT, copia `chatgpt/custom-gpt/CHATGPT_INSTRUCTIONS.md` en **Instructions**, añade los archivos de `chatgpt/knowledge/` en **Knowledge** y activa *Code Interpreter*. Compatible también como plugin o skill en Codex. |
+| **Google Gemini** | [`downloads/EVTT_Business_Case_Gemini_Instalacion.zip`](evtt-business-case/downloads/EVTT_Business_Case_Gemini_Instalacion.zip) | En Gemini Gems, pega `gemini/GEM_INSTRUCTIONS.md` en las instrucciones y carga los documentos de referencia de `gemini/knowledge/`. |
 
 ---
 
