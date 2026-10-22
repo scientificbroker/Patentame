@@ -126,9 +126,9 @@ El skill se encuentra en `patentes-vigilancia-tecnologica/SKILL.md`.
 
 ---
 
-## 📊 Skill — EVTT (Evaluación y Vigilancia Tecnológica / Business Case)
+## 📊 Skill — EVTT (Evaluación y Valuación para la Transferencia Tecnológica / Business Case)
 
-El módulo de **Evaluación y Vigilancia Tecnológica (EVTT)** transforma la investigación técnica, las memorias de patentes y los análisis FTO en **casos de negocio financieros estructurados**. Permite evaluar la viabilidad de comercialización, estimar valoración económica, analizar TRL/CRL y modelar flujos de caja y escenarios de inversión (incluye script Python para generar un modelo financiero de 10 pestañas en Excel).
+El módulo de **Evaluación y Valuación para la Transferencia Tecnológica (EVTT)** transforma la investigación técnica, las memorias de patentes y los análisis FTO en **casos de negocio financieros estructurados**. Permite evaluar la viabilidad de comercialización, estimar valoración económica, analizar TRL/CRL y modelar flujos de caja y escenarios de inversión (incluye script Python para generar un modelo financiero de 14 pestañas en Excel) utilizando método VC model ajustado por riesgo de Berkus.
 
 Cuenta con paquetes de instalación y fuentes portables para las tres plataformas líderes en [`evtt-business-case/`](evtt-business-case/):
 
