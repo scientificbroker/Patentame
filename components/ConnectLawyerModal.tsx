@@ -99,7 +99,7 @@ export const ConnectLawyerModal: React.FC<ConnectLawyerModalProps> = ({
                   {isEs ? 'Conectar con un Agente Oficial de Patentes' : 'Connect with an Official Patent Attorney'}
                 </h3>
                 <p className="text-xs text-purple-300">
-                  {isEs ? 'Revisión formal, blindaje legal y radicación ante la oficina de PI' : 'Formal review, legal reinforcement & official IP filing'}
+                  {isEs ? 'Revisión formal, blindaje legal y gestión de patente ante la oficina de PI' : 'Formal review, legal reinforcement & patent management'}
                 </p>
               </div>
             </div>

@@ -1132,10 +1132,10 @@ const App: React.FC = () => {
                                     </div>
                                     <div>
                                         <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-300 text-[10px] font-bold uppercase tracking-wider mb-1.5">
-                                            <span>⚖️ {lang === 'es' ? 'Servicio de Radicación Legal' : 'Official Legal Filing'}</span>
+                                            <span>⚖️ {lang === 'es' ? 'Asesoría y Trámite Legal de Patentes' : 'Official Patent Advisory & Filing'}</span>
                                         </div>
                                         <h3 className="text-lg font-extrabold text-white">
-                                            {lang === 'es' ? '¿Listo para radicar? Conecta con un Agente Oficial de Patentes' : 'Ready to file? Connect with an Official Patent Attorney'}
+                                            {lang === 'es' ? '¿Listo para patentar? Conecta con un Agente Oficial de Patentes' : 'Ready to patent? Connect with an Official Patent Attorney'}
                                         </h3>
                                         <p className="text-xs text-purple-200/90 mt-1 max-w-xl leading-relaxed">
                                             {lang === 'es'
@@ -1354,6 +1354,14 @@ const App: React.FC = () => {
               isOpen={isDonationModalOpen} 
               onClose={() => setIsDonationModalOpen(false)} 
               lang={lang} 
+            />
+            <ConnectLawyerModal
+              isOpen={isLawyerModalOpen}
+              onClose={() => setIsLawyerModalOpen(false)}
+              patentData={patentData}
+              patentType={patentType}
+              classification={classification}
+              lang={lang}
             />
         </div>
     );
