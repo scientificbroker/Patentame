@@ -11,6 +11,8 @@ import customLogo from './assets/logot.png';
 import { FtoChatbot } from './components/FtoChatbot';
 import { OnboardingTour } from './components/OnboardingTour';
 import { DonationModal } from './components/DonationModal';
+import { ConnectLawyerModal } from './components/ConnectLawyerModal';
+import { Scale, RotateCcw, Trash2 } from 'lucide-react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Heart } from 'lucide-react';
 
@@ -89,13 +91,92 @@ const App: React.FC = () => {
     
     // Donation State
     const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
+    const [isLawyerModalOpen, setIsLawyerModalOpen] = useState(false);
+    const [savedDraftFound, setSavedDraftFound] = useState<{ date: string; title: string } | null>(null);
 
     useEffect(() => {
         const hasSeen = localStorage.getItem('hasSeenOnboarding');
         if (!hasSeen) {
             setRunOnboarding(true);
         }
+
+        // Detección de borrador previo en localStorage
+        try {
+            const rawDraft = localStorage.getItem('patentame_draft_state_v1');
+            if (rawDraft) {
+                const parsed = JSON.parse(rawDraft);
+                const hasAnyContent = parsed.patentData && Object.values(parsed.patentData).some((v: any) => typeof v === 'string' && v.trim().length > 10);
+                if (hasAnyContent) {
+                    const formattedDate = new Date(parsed.timestamp || Date.now()).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', {
+                        day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                    });
+                    setSavedDraftFound({
+                        date: formattedDate,
+                        title: parsed.patentData.title || (lang === 'es' ? 'Invención en curso' : 'Ongoing invention')
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('Error reading saved draft from localStorage:', e);
+        }
     }, []);
+
+    // Autosave con Debounce (800ms) en localStorage
+    useEffect(() => {
+        const hasAnyContent = Object.values(patentData).some(v => v.trim().length > 0) || ideaDescription.trim().length > 0;
+        if (!hasAnyContent) return;
+
+        const timer = setTimeout(() => {
+            try {
+                const draftToSave = {
+                    version: 1,
+                    timestamp: Date.now(),
+                    step,
+                    patentType,
+                    patentData,
+                    ideaDescription,
+                    classification
+                };
+                localStorage.setItem('patentame_draft_state_v1', JSON.stringify(draftToSave));
+            } catch (err) {
+                console.warn('LocalStorage autosave failed:', err);
+            }
+        }, 800);
+
+        return () => clearTimeout(timer);
+    }, [step, patentType, patentData, ideaDescription, classification]);
+
+    const handleRestoreDraft = () => {
+        try {
+            const raw = localStorage.getItem('patentame_draft_state_v1');
+            if (!raw) return;
+            const draft = JSON.parse(raw);
+            if (draft.patentData) setPatentData(draft.patentData);
+            if (draft.patentType) setPatentType(draft.patentType);
+            if (typeof draft.step === 'number') setStep(draft.step);
+            if (draft.ideaDescription) setIdeaDescription(draft.ideaDescription);
+            if (draft.classification) setClassification(draft.classification);
+            setSavedDraftFound(null);
+        } catch (err) {
+            console.error('Failed to restore draft', err);
+        }
+    };
+
+    const handleDiscardDraft = () => {
+        localStorage.removeItem('patentame_draft_state_v1');
+        setSavedDraftFound(null);
+    };
+
+    const handleResetAll = () => {
+        if (window.confirm(lang === 'es' ? '¿Deseas iniciar una nueva solicitud y vaciar este borrador?' : 'Start a new draft and clear current work?')) {
+            localStorage.removeItem('patentame_draft_state_v1');
+            setPatentData({ title: '', technicalSector: '', priorArt: '', inventionSummary: '', detailedDescription: '', claims: '', abstract: '' });
+            setPriorArtDoc(null);
+            setInventionDescDoc(null);
+            setClassification(null);
+            setStep(0);
+        }
+    };
 
     const handleFinishOnboarding = () => {
         localStorage.setItem('hasSeenOnboarding', 'true');
@@ -1042,9 +1123,51 @@ const App: React.FC = () => {
                             </button>
                         </div>
 
+                         {/* TARJETA DE CONVERSIÓN COMERCIAL: CONECTAR CON ABOGADO */}
+                         <div className="mb-6 p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-purple-950/40 to-slate-900 border-2 border-purple-500/40 shadow-2xl relative overflow-hidden text-left">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3.5 bg-purple-600/30 border border-purple-400/50 rounded-2xl text-purple-300 shrink-0 shadow-lg">
+                                        <Scale className="w-8 h-8" />
+                                    </div>
+                                    <div>
+                                        <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-300 text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                                            <span>⚖️ {lang === 'es' ? 'Servicio de Radicación Legal' : 'Official Legal Filing'}</span>
+                                        </div>
+                                        <h3 className="text-lg font-extrabold text-white">
+                                            {lang === 'es' ? '¿Listo para radicar? Conecta con un Agente Oficial de Patentes' : 'Ready to file? Connect with an Official Patent Attorney'}
+                                        </h3>
+                                        <p className="text-xs text-purple-200/90 mt-1 max-w-xl leading-relaxed">
+                                            {lang === 'es'
+                                                ? 'Un abogado colegiado especialista en propiedad intelectual revisará la suficiencia técnica y blindará las reivindicaciones para presentar tu solicitud ante la oficina oficial (INDECOPI, OEPM, USPTO, SIC o vía PCT).'
+                                                : 'A specialized patent attorney will audit technical sufficiency and file your application before your target intellectual property office.'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsLawyerModalOpen(true)}
+                                    className="w-full md:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-extrabold text-xs shadow-xl transition-all transform hover:scale-105 shrink-0 flex items-center justify-center gap-2"
+                                >
+                                    <span>{lang === 'es' ? 'Solicitar Revisión con Especialista' : 'Request Specialist Review'}</span>
+                                    <span>→</span>
+                                </button>
+                            </div>
+                         </div>
+
                          <div className="mt-6 p-3 bg-purple-900/10 border border-purple-500/20 rounded-lg text-sm text-purple-200/90 flex items-start">
                             <InfoIcon className="h-5 w-5 mr-3 text-purple-400 shrink-0 mt-0.5" />
                             <p>{STRINGS[lang].checklist.wipoTip}</p>
+                        </div>
+
+                        {/* Botón para vaciar y comenzar nueva patente */}
+                        <div className="mt-4 flex justify-end">
+                            <button
+                                onClick={handleResetAll}
+                                className="text-xs text-gray-400 hover:text-red-300 flex items-center gap-1.5 transition-colors py-1 px-3 rounded-lg hover:bg-white/5"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>{lang === 'es' ? 'Limpiar borrador y crear nueva solicitud' : 'Clear draft & start fresh'}</span>
+                            </button>
                         </div>
 
                          <div className="mt-8 text-center text-gray-400 border-t border-white/10 pt-6">
@@ -1106,6 +1229,39 @@ const App: React.FC = () => {
                 </button>
                 <LanguageSwitcher lang={lang} setLang={setLang} />
             </div>
+
+            {/* Banner de Recuperación de Borrador Local */}
+            {savedDraftFound && (
+                <div className="w-full max-w-4xl mx-auto mb-4 p-4 rounded-2xl bg-gradient-to-r from-purple-950/80 to-blue-950/80 border border-purple-500/40 shadow-xl backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in slide-in-from-top-3 z-40">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-600/30 rounded-xl text-purple-300">
+                            <RotateCcw className="w-5 h-5 animate-spin-reverse" />
+                        </div>
+                        <div className="text-left text-xs">
+                            <p className="font-bold text-white">
+                                {lang === 'es' ? '¡Borrador guardado automáticamente detectado!' : 'Autosaved draft detected!'}
+                            </p>
+                            <p className="text-purple-200/80">
+                                {lang === 'es' ? `Última edición (${savedDraftFound.date}): "${savedDraftFound.title}"` : `Last edited (${savedDraftFound.date}): "${savedDraftFound.title}"`}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 self-end sm:self-center">
+                        <button
+                            onClick={handleRestoreDraft}
+                            className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition shadow-sm"
+                        >
+                            {lang === 'es' ? 'Restaurar' : 'Restore'}
+                        </button>
+                        <button
+                            onClick={handleDiscardDraft}
+                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 text-xs transition"
+                        >
+                            {lang === 'es' ? 'Descartar' : 'Dismiss'}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div className="w-full max-w-7xl mx-auto pt-14 sm:pt-10 md:pt-4">
                  <header className="mb-8">
