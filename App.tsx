@@ -858,18 +858,36 @@ const App: React.FC = () => {
                                                 </div>
                                             )}
 
-                                            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-lg mb-4 ${
-                                                classification.recommendation === 'invention'
-                                                    ? 'bg-purple-500/20 border border-purple-500/40 text-purple-200'
-                                                    : 'bg-blue-500/20 border border-blue-500/40 text-blue-200'
-                                            }`}>
-                                                {classification.recommendation === 'invention'
-                                                    ? (lang === 'es'
-                                                        ? (!inventionDescDoc || classification.confidence !== 'high' ? '🔬 Potencial Patente de Invención' : '🔬 Patente de Invención')
-                                                        : (!inventionDescDoc || classification.confidence !== 'high' ? '🔬 Potential Invention Patent' : '🔬 Invention Patent'))
-                                                    : (lang === 'es'
-                                                        ? (!inventionDescDoc || classification.confidence !== 'high' ? '🔧 Potencial Modelo de Utilidad' : '🔧 Modelo de Utilidad')
-                                                        : (!inventionDescDoc || classification.confidence !== 'high' ? '🔧 Potential Utility Model' : '🔧 Utility Model'))}
+                                            <div className="flex flex-wrap items-center gap-3 mb-4">
+                                                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-lg ${
+                                                    classification.recommendation === 'invention'
+                                                        ? 'bg-purple-500/20 border border-purple-500/40 text-purple-200'
+                                                        : 'bg-blue-500/20 border border-blue-500/40 text-blue-200'
+                                                }`}>
+                                                    {classification.recommendation === 'invention'
+                                                        ? (lang === 'es'
+                                                            ? (!inventionDescDoc || classification.confidence !== 'high' ? '🔬 Potencial Patente de Invención' : '🔬 Patente de Invención')
+                                                            : (!inventionDescDoc || classification.confidence !== 'high' ? '🔬 Potential Invention Patent' : '🔬 Invention Patent'))
+                                                        : (lang === 'es'
+                                                            ? (!inventionDescDoc || classification.confidence !== 'high' ? '🔧 Potencial Modelo de Utilidad' : '🔧 Modelo de Utilidad')
+                                                            : (!inventionDescDoc || classification.confidence !== 'high' ? '🔧 Potential Utility Model' : '🔧 Utility Model'))}
+                                                </div>
+
+                                                {/* Badge Probabilidad Laya Engine */}
+                                                {classification.probabilityPercent && (
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold shadow-sm">
+                                                        <span>⚡ Probabilidad Laya:</span>
+                                                        <span className="text-emerald-200 font-extrabold text-sm">{classification.probabilityPercent}%</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Badge Nivel Inventivo (1 a 10) */}
+                                                {classification.inventiveStepScore && (
+                                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-bold shadow-sm">
+                                                        <span>🎯 Altura Inventiva:</span>
+                                                        <span className="text-purple-100 font-extrabold text-sm">{classification.inventiveStepScore}/10</span>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Reasoning */}
@@ -903,13 +921,26 @@ const App: React.FC = () => {
 
                                             {/* Strategic Advice */}
                                             {classification.strategicAdvice && (
-                                                <div className="mb-5 p-4 bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-2xl flex items-start gap-3">
+                                                <div className="mb-4 p-4 bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-2xl flex items-start gap-3">
                                                     <span className="text-lg shrink-0">💡</span>
                                                     <div>
                                                         <p className="text-xs font-bold text-purple-300 uppercase tracking-wide mb-1">
                                                             {lang === 'es' ? 'Consejo Estratégico de Cobertura' : 'Strategic Filing Advice'}
                                                         </p>
                                                         <p className="text-xs text-purple-100/90 leading-relaxed">{classification.strategicAdvice}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Laya Engine - Consejo para maximizar probabilidad */}
+                                            {classification.adviceForHigherProbability && (
+                                                <div className="mb-5 p-4 bg-emerald-950/40 border border-emerald-500/40 rounded-2xl flex items-start gap-3">
+                                                    <span className="text-lg shrink-0">🚀</span>
+                                                    <div>
+                                                        <p className="text-xs font-bold text-emerald-300 uppercase tracking-wide mb-1">
+                                                            {lang === 'es' ? 'Recomendación Laya para Elevar Probabilidad' : 'Laya Guidance for Higher Allowance Probability'}
+                                                        </p>
+                                                        <p className="text-xs text-emerald-100/90 leading-relaxed">{classification.adviceForHigherProbability}</p>
                                                     </div>
                                                 </div>
                                             )}
