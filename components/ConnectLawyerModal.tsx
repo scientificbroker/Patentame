@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, X, Send, Scale, CheckCircle2, Clock, MapPin, Mail, Phone, User, Building, AlertCircle } from 'lucide-react';
+import { ShieldCheck, X, Send, Scale, CheckCircle2, Clock, MapPin, Mail, Phone, User, Building, AlertCircle, Copy, Check, ExternalLink } from 'lucide-react';
 import type { PatentData, PatentClassification, PatentType, Language } from '../types';
 
 interface ConnectLawyerModalProps {
@@ -30,6 +30,36 @@ export const ConnectLawyerModal: React.FC<ConnectLawyerModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [leadCode, setLeadCode] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopyCode = () => {
+    if (leadCode) {
+      navigator.clipboard.writeText(leadCode);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2500);
+    }
+  };
+
+  const mailtoUrl = leadCode ? `mailto:biogenia.lab@gmail.com?subject=${encodeURIComponent(`[PATÉNTAME] Expediente ${leadCode} - ${fullName}`)}&body=${encodeURIComponent(
+`Estimado equipo de Paténtame / Biogenia Lab,
+
+He remitido mi solicitud de revisión técnica y blindaje de patente a través de la plataforma:
+
+- Código de Seguimiento: ${leadCode}
+- Solicitante: ${fullName}
+- Entidad: ${organization || 'Particular'}
+- Correo: ${email}
+- Teléfono / WhatsApp: ${phone || 'No especificado'}
+- Jurisdicción Objetivo: ${jurisdiction}
+- Título de la Invención: ${patentData.title || 'En borrador'}
+- Modalidad: ${patentType === 'utilityModel' ? 'Modelo de Utilidad' : 'Patente de Invención'}
+
+Notas adicionales:
+${comments || 'Sin comentarios adicionales.'}
+
+Quedo atento a su evaluación y coordinación de los siguientes pasos.
+`
+  )}` : '#';
 
   if (!isOpen) return null;
 
@@ -271,25 +301,63 @@ export const ConnectLawyerModal: React.FC<ConnectLawyerModalProps> = ({
               {isEs ? '¡Expediente Derivado con Éxito!' : 'Docket Submitted Successfully!'}
             </h3>
 
+            {/* Código de Seguimiento con botón copiar */}
             <div className="p-4 bg-white/5 border border-white/10 rounded-2xl max-w-sm mx-auto">
               <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
-                {isEs ? 'Código de Seguimiento' : 'Tracking Code'}
+                {isEs ? 'Código de Seguimiento Oficial' : 'Official Tracking Code'}
               </p>
-              <p className="font-mono text-xl font-bold text-purple-300 select-all">
-                {leadCode}
+              <div className="flex items-center justify-center gap-2">
+                <span className="font-mono text-2xl font-bold text-purple-300 select-all">
+                  {leadCode}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyCode}
+                  title={isEs ? 'Copiar código' : 'Copy code'}
+                  className="p-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/40 text-purple-300 transition"
+                >
+                  {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Notificación de envío a correo biogenia.lab@gmail.com */}
+            <div className="p-3 bg-purple-900/30 border border-purple-500/30 rounded-2xl text-xs text-purple-200 text-left space-y-1.5 max-w-md mx-auto">
+              <div className="flex items-center gap-2 font-semibold text-purple-300">
+                <Mail className="w-4 h-4 shrink-0" />
+                <span>{isEs ? 'Notificación Automática de Envío:' : 'Automated Email Notification:'}</span>
+              </div>
+              <p className="leading-relaxed opacity-90">
+                {isEs 
+                  ? 'Los datos de tu solicitud y el resumen del expediente han sido transmitidos al buzón de revisión técnica oficial en '
+                  : 'Your request data and docket summary have been dispatched to our official review desk at '}
+                <strong className="text-white underline">biogenia.lab@gmail.com</strong>.
               </p>
             </div>
 
             <p className="text-xs text-gray-300 leading-relaxed max-w-md mx-auto">
               {isEs
-                ? 'Un Agente de la Propiedad Industrial especializado en tu jurisdicción revisará la suficiencia técnica y se comunicará contigo al correo o teléfono proporcionado en menos de 24 horas hábiles.'
-                : 'An official Patent Attorney in your jurisdiction will review the technical sufficiency and contact you within 24 business hours.'}
+                ? 'Un especialista colegiado en tu jurisdicción revisará la suficiencia técnica y se comunicará contigo al correo o teléfono proporcionado en menos de 24 horas hábiles.'
+                : 'A patent specialist in your jurisdiction will review technical sufficiency and contact you within 24 business hours.'}
             </p>
 
-            <div className="pt-4">
+            {/* Acciones directas */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href={mailtoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-purple-200 font-semibold text-xs transition flex items-center justify-center gap-2"
+              >
+                <Mail className="w-4 h-4" />
+                <span>{isEs ? 'Abrir copia en mi correo' : 'Open copy in my email'}</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+              </a>
+
               <button
+                type="button"
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition"
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition"
               >
                 {isEs ? 'Entendido, volver a mi borrador' : 'Got it, return to draft'}
               </button>

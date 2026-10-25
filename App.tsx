@@ -305,8 +305,8 @@ const App: React.FC = () => {
         setSearchResults([]);
         setHasSearched(false);
         try {
-            const query = await generateSearchQuery(ideaDescription, lang);
-            const results = await searchPatents(query);
+            // Pasamos la descripción completa a la API multivariada de patentes, tesis y literatura
+            const results = await searchPatents(ideaDescription);
             setSearchResults(results);
             setHasSearched(true);
         } catch (error: any) {
@@ -645,7 +645,7 @@ const App: React.FC = () => {
                                     </h3>
                                     <p className="text-sm text-gray-300 mb-4">
                                         {lang === 'es' 
-                                         ? 'Describe tu invención. Nuestra IA creará una ecuación de búsqueda, consultará la base de datos global de patentes (EPO) y armará tu documento de Estado de la Técnica automáticamente.'
+                                         ? 'Describe tu invención. Nuestra IA creará la ecuación técnica y consultará simultáneamente bases globales de patentes (EPO, USPTO), tesis académicas (OpenAlex) y literatura científica para blindar tu Estado del Arte.'
                                          : 'Describe your invention. Our AI will create a search query, consult the global patent database (EPO), and build your State of the Art document automatically.'}
                                     </p>
                                     
@@ -674,12 +674,12 @@ const App: React.FC = () => {
                                         {isSearching ? (
                                             <>
                                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                                {lang === 'es' ? 'Consultando patentes mundiales...' : 'Querying global patents...'}
+                                                {lang === 'es' ? 'Consultando patentes, tesis y literatura global...' : 'Querying global patents, theses & papers...'}
                                             </>
                                         ) : (
                                             <>
                                                 <SparklesIcon className="w-5 h-5" />
-                                                {lang === 'es' ? 'Buscar Patentes Similares' : 'Search Similar Patents'}
+                                                {lang === 'es' ? 'Buscar Patentes, Tesis y Literatura Previa' : 'Search Patents, Theses & Prior Literature'}
                                             </>
                                         )}
                                     </button>
@@ -704,7 +704,7 @@ const App: React.FC = () => {
                                 {searchResults.length > 0 && (
                                     <div className="mt-8">
                                         <h3 className="font-bold text-white mb-4">
-                                            {lang === 'es' ? 'Patentes Encontradas' : 'Found Patents'}
+                                            {lang === 'es' ? 'Documentos de Estado de la Técnica Encontrados (Patentes, Tesis y Papers)' : 'Prior Art Documents Found (Patents, Theses & Papers)'}
                                         </h3>
                                         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
                                             {searchResults.map((patent) => (

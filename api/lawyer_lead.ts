@@ -2,6 +2,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export const maxDuration = 30;
 
+const DESTINATION_EMAIL = 'biogenia.lab@gmail.com';
+
 interface LawyerLeadPayload {
   fullName: string;
   organization?: string;
@@ -58,7 +60,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       notas: comments
     });
 
-    // Si en el entorno se configuran webhooks para CRM (Airtable / Discord / Slack / Telegram)
+    // 1. Envío automatizado por correo electrónico hacia biogenia.lab@gmail.com vía FormSubmit AJAX
+    try {
+      const emailPayload = {
+        _subject: `[PATÉNTAME] Nueva Solicitud de Agente de Patentes: ${leadCode} - ${fullName}`,
+        _template: 'table',
+        _captcha: 'false',
+        'Código de Expediente': leadCode,
+        'Nombre del Solicitante': fullName,
+        'Entidad / Empresa': organization || 'Particular / Independiente',
+        'Correo de Contacto': email,
+        'Teléfono / WhatsApp': phone || 'No especificado',
+        'Jurisdicción Objetivo': jurisdiction,
+        'Modalidad de Patente': patentType,
+        'Título de la Invención': patentTitle,
+        'Probabilidad Estimada (Laya)': probabilityPercent ? `${probabilityPercent}%` : 'N/A',
+        'Score Nivel Inventivo': inventiveStepScore ? `${inventiveStepScore}/10` : 'N/A',
+        'Notas / Requerimientos': comments || 'Sin notas adicionales',
+        'Extracto Técnico del Borrador': summarySnippet || 'No especificado'
+      };
+
+      await fetch(`https://formsubmit.co/ajax/${DESTINATION_EMAIL}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Origin': 'https://patentame.vercel.app',
+          'Referer': 'https://patentame.vercel.app/',
+          'User-Agent': 'Patentame-Lead-Service/1.0'
+        },
+        body: JSON.stringify(emailPayload)
+      }).catch(err => console.warn('[lawyer_lead] FormSubmit warning:', err));
+    } catch (mailErr) {
+      console.warn('[lawyer_lead] Email delivery error:', mailErr);
+    }
+
+    // 2. Si en el entorno se configuran webhooks para CRM (Airtable / Discord / Slack / Telegram)
     const webhookUrl = process.env.LEADS_WEBHOOK_URL;
     if (webhookUrl) {
       try {
@@ -66,7 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            content: `🚨 **NUEVO LEAD DE PATENTE RECIBIDO**: \`${leadCode}\`\n**Solicitante:** ${fullName} (${organization || 'Particular'})\n**Email:** ${email} | **Tel:** ${phone || 'N/A'}\n**Jurisdicción:** ${jurisdiction}\n**Tipo:** ${patentType}\n**Título:** ${patentTitle}\n**Probabilidad Laya:** ${probabilityPercent || 'N/A'}% (Score: ${inventiveStepScore || 'N/A'}/10)`
+            content: `🚨 **NUEVO LEAD DE PATENTE RECIBIDO**: \`${leadCode}\`\n**Destino:** ${DESTINATION_EMAIL}\n**Solicitante:** ${fullName} (${organization || 'Particular'})\n**Email:** ${email} | **Tel:** ${phone || 'N/A'}\n**Jurisdicción:** ${jurisdiction}\n**Tipo:** ${patentType}\n**Título:** ${patentTitle}\n**Probabilidad Laya:** ${probabilityPercent || 'N/A'}% (Score: ${inventiveStepScore || 'N/A'}/10)`
           })
         });
       } catch (webhookErr) {
@@ -77,7 +114,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       success: true,
       leadCode,
-      message: 'Expediente registrado con éxito para revisión por especialista'
+      destinationEmail: DESTINATION_EMAIL,
+      message: `Expediente registrado con éxito y notificado a ${DESTINATION_EMAIL}`
     });
 
   } catch (error: any) {
