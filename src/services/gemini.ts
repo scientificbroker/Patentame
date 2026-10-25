@@ -13,6 +13,7 @@ import type {
   UploadedFile,
 } from '../../types';
 import type { Part } from '@google/genai';
+import { getLocalWipoSectionFallback } from './fallbackHelper';
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -404,7 +405,7 @@ export const generateDraft = async (
   inventionDescDoc: UploadedFile | null
 ): Promise<string> => {
   if (!priorArtDoc && !inventionDescDoc && !patentData.priorArt && !patentData.title) {
-    return getLocalWipoSectionFallback(section.id, lang);
+    return getLocalWipoSectionFallback(section.id, lang, undefined, patentData, priorArtDoc, inventionDescDoc);
   }
 
   const { parts, priorArtContext, inventionDescContext } = getPartsFromDocs(
@@ -442,10 +443,10 @@ export const generateDraft = async (
 
   try {
     const result = await callChatApi('generateDraft', systemInstruction, parts);
-    return result || getLocalWipoSectionFallback(section.id, lang);
+    return result || getLocalWipoSectionFallback(section.id, lang, undefined, patentData, priorArtDoc, inventionDescDoc);
   } catch (error) {
     console.warn('[gemini.ts] generateDraft API fallback triggered:', error);
-    return getLocalWipoSectionFallback(section.id, lang);
+    return getLocalWipoSectionFallback(section.id, lang, undefined, patentData, priorArtDoc, inventionDescDoc);
   }
 };
 
@@ -535,10 +536,10 @@ export const improveText = async (
 
   try {
     const result = await callChatApi('improveText', systemInstruction, parts);
-    return result || getLocalWipoSectionFallback(section.id, lang, textToImprove);
+    return result || getLocalWipoSectionFallback(section.id, lang, textToImprove, patentData, priorArtDoc, inventionDescDoc);
   } catch (error) {
     console.warn('[gemini.ts] improveText API fallback triggered:', error);
-    return getLocalWipoSectionFallback(section.id, lang, textToImprove);
+    return getLocalWipoSectionFallback(section.id, lang, textToImprove, patentData, priorArtDoc, inventionDescDoc);
   }
 };
 

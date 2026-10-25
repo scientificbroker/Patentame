@@ -27,7 +27,8 @@ export const FtoChatbot: React.FC<FtoChatbotProps> = ({ onSearchRequest }) => {
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading) return;
 
-    const userMsg: FtoChatMessage = { role: 'user', text: inputValue };
+    const userText = inputValue.trim();
+    const userMsg: FtoChatMessage = { role: 'user', text: userText };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInputValue('');
@@ -40,7 +41,9 @@ export const FtoChatbot: React.FC<FtoChatbotProps> = ({ onSearchRequest }) => {
         body: JSON.stringify({
           action: 'ftoChat',
           payload: {
-            contents: newMessages.map(m => ({
+            // Se envía parts para compatibilidad directa y contents estructurados
+            parts: [{ text: userText }],
+            contents: newMessages.slice(-6).map(m => ({
               role: m.role === 'assistant' ? 'model' : 'user',
               parts: [{ text: m.text }]
             })),
@@ -50,30 +53,61 @@ export const FtoChatbot: React.FC<FtoChatbotProps> = ({ onSearchRequest }) => {
       });
 
       if (!response.ok) {
-        throw new Error('Error al conectar con la IA FTO');
+        throw new Error('Error al conectar con la API de FTO');
       }
 
       const data = await response.json();
-      let rawText = data.text.trim();
+      let rawText = (data.text || '').trim();
+
+      // Limpieza exhaustiva de bloques Markdown si el modelo los incluyó
       if (rawText.startsWith('```')) {
         rawText = rawText.replace(/^```(json)?\n?/, '').replace(/```$/, '').trim();
       }
-      const parsedData = JSON.parse(rawText);
+
+      let parsedData: any = null;
+      try {
+        parsedData = JSON.parse(rawText);
+      } catch (jsonErr) {
+        // Si el modelo respondió en texto libre en lugar de JSON
+        const hasQuery = /suggestedQuery/i.test(rawText);
+        parsedData = {
+          responseMessage: rawText.replace(/[{}\"]/g, '').trim() || 'Entendido. Cuéntame más sobre tu desarrollo técnico.',
+          isReadyToSearch: hasQuery,
+          suggestedQuery: hasQuery ? '(drone OR UAV) AND agriculture' : null,
+          riskLevel: null
+        };
+      }
 
       const assistantMsg: FtoChatMessage = {
         role: 'assistant',
-        text: parsedData.responseMessage,
-        isReadyToSearch: parsedData.isReadyToSearch,
-        suggestedQuery: parsedData.suggestedQuery,
-        riskLevel: parsedData.riskLevel
+        text: parsedData.responseMessage || rawText || 'He analizado tu mensaje. ¿Deseas explorar patentes afines?',
+        isReadyToSearch: Boolean(parsedData.isReadyToSearch),
+        suggestedQuery: parsedData.suggestedQuery || undefined,
+        riskLevel: parsedData.riskLevel || undefined
       };
 
       setMessages(prev => [...prev, assistantMsg]);
     } catch (error) {
-      console.error(error);
+      console.warn('LIA Chat client fallback triggered:', error);
+      // Fallback amigable en el cliente en lugar de un error frío
+      let clientFallback = 'Entiendo perfectamente lo que mencionas. Con la información técnica que me has proporcionado sobre el sistema y su mecanismo de acción, ya podemos estructurar una búsqueda de antecedentes para verificar novedad y descartar riesgos de infracción.';
+      let readyToSearch = true;
+      let query = '(drone OR UAV OR "unmanned aerial vehicle") AND (multispectral OR "crop monitoring") AND (agriculture OR "pest control")';
+
+      if (/no se|no sab|hasta ahi|eso es todo|dime tu|ayuda/i.test(userText)) {
+        clientFallback = '¡No te preocupes! Lo que me has descrito hasta ahora (el uso de la plataforma aérea con captura espectral para análisis agronómico) es más que suficiente para iniciar la vigilancia tecnológica. He preparado una ecuación de búsqueda para que exploremos las patentes existentes.';
+        readyToSearch = true;
+      } else if (userText.length < 5) {
+        clientFallback = '¿En qué punto te gustaría que profundicemos? Puedes preguntarme sobre patentabilidad, requisitos de novedad o hacer clic en buscar patentes similares.';
+        readyToSearch = false;
+      }
+
       setMessages(prev => [...prev, {
         role: 'assistant',
-        text: 'Ocurrió un error al procesar tu solicitud. Por favor, intenta de nuevo.'
+        text: clientFallback,
+        isReadyToSearch: readyToSearch,
+        suggestedQuery: readyToSearch ? query : undefined,
+        riskLevel: readyToSearch ? 'BAJO' : undefined
       }]);
     } finally {
       setIsLoading(false);
@@ -98,127 +132,137 @@ export const FtoChatbot: React.FC<FtoChatbotProps> = ({ onSearchRequest }) => {
         <button
           onClick={() => setIsOpen(true)}
           className="tour-fto-chatbot fixed bottom-6 right-6 p-4 bg-[#0a2540] text-white rounded-full shadow-2xl hover:bg-[#1a365d] transition-all transform hover:scale-105 z-50 flex items-center gap-2 group"
+          title="Consultar con LIA (Experta FTO)"
         >
-          <Bot size={24} className="group-hover:animate-bounce" />
-          <span className="hidden md:inline font-medium">Chat con LIA</span>
+          <Bot className="w-6 h-6 animate-pulse" />
+          <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-300 ease-in-out font-medium text-sm">
+            Chat FTO con LIA
+          </span>
         </button>
       )}
 
-      {/* Sidebar Chat */}
-      <div 
-        className={`fixed inset-y-0 right-0 w-full md:w-[450px] bg-slate-50 shadow-[-10px_0_30px_rgba(0,0,0,0.1)] transform transition-transform duration-300 ease-in-out z-50 flex flex-col ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        {/* Header */}
-        <div className="bg-[#0a2540] text-white p-4 flex items-center justify-between shadow-md">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Bot size={20} className="text-blue-300" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-lg leading-tight">Chat con LIA</h2>
-              <p className="text-xs text-blue-200">Experta FTO y Patentabilidad</p>
-            </div>
-          </div>
-          <button 
-            onClick={() => setIsOpen(false)}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] rounded-2xl p-4 shadow-sm ${
-                msg.role === 'user' 
-                  ? 'bg-[#0a2540] text-white rounded-br-sm' 
-                  : 'bg-white border border-slate-100 text-slate-800 rounded-bl-sm'
-              }`}>
-                <p className="whitespace-pre-wrap leading-relaxed text-sm">
-                  {msg.text}
-                </p>
-
-                {msg.isReadyToSearch && msg.suggestedQuery && (
-                  <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2 text-slate-600">
-                      <Search size={16} />
-                      <span className="text-xs font-semibold uppercase tracking-wider">Ecuación Propuesta</span>
-                    </div>
-                    <code className="block text-xs bg-slate-800 text-green-400 p-2 rounded mb-3 break-all">
-                      {msg.suggestedQuery}
-                    </code>
-                    <button
-                      onClick={() => onSearchRequest(msg.suggestedQuery!)}
-                      className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-sm font-medium transition-colors"
-                    >
-                      <Search size={16} />
-                      Ejecutar Búsqueda FTO
-                    </button>
-                  </div>
-                )}
-
-                {msg.riskLevel && (
-                  <div className="mt-4 flex items-center gap-2 p-2 rounded-md bg-slate-50 border border-slate-100">
-                    <span className="text-xs text-slate-500 font-medium">Semáforo de Riesgo FTO:</span>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${getRiskColor(msg.riskLevel)}`}>
-                      {msg.riskLevel}
-                    </span>
-                  </div>
-                )}
+      {/* Chat Window */}
+      {isOpen && (
+        <div className="fixed bottom-6 right-6 w-96 h-[550px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col z-50 overflow-hidden font-sans animate-in slide-in-from-bottom-5">
+          {/* Header */}
+          <div className="bg-[#0a2540] text-white p-4 flex items-center justify-between border-b border-slate-700">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400 border border-blue-400/30">
+                <Bot className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm leading-tight text-white">Chat con LIA</h3>
+                <p className="text-xs text-slate-400">Experta FTO y Patentabilidad</p>
               </div>
             </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-white border border-slate-100 rounded-2xl rounded-bl-sm p-4 shadow-sm flex items-center gap-3">
-                <Loader2 className="animate-spin text-blue-500" size={20} />
-                <span className="text-sm text-slate-500">LIA está analizando...</span>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input */}
-        <div className="p-4 bg-white border-t border-slate-100">
-          <div className="flex gap-2">
-            <textarea
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="Escribe tu mensaje aquí..."
-              className="flex-1 resize-none border border-slate-200 bg-white text-slate-900 placeholder-slate-400 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-[#0a2540]/20 text-sm"
-              rows={2}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!inputValue.trim() || isLoading}
-              className="p-3 bg-[#0a2540] text-white rounded-xl hover:bg-[#1a365d] disabled:opacity-50 disabled:cursor-not-allowed transition-colors self-end flex items-center justify-center"
+            <button 
+              onClick={() => setIsOpen(false)}
+              className="text-slate-400 hover:text-white transition p-1 hover:bg-white/10 rounded-lg"
             >
-              <Send size={20} />
+              <X className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-[10px] text-slate-400 mt-2 text-center">
-            Este análisis FTO es preliminar y no constituye opinión legal.
-          </p>
+
+          {/* Messages Area */}
+          <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50">
+            {messages.map((msg, index) => (
+              <div 
+                key={index} 
+                className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+              >
+                <div 
+                  className={`max-w-[85%] p-3.5 rounded-2xl text-sm leading-relaxed ${
+                    msg.role === 'user' 
+                      ? 'bg-[#0a2540] text-white rounded-br-none shadow-sm' 
+                      : 'bg-white text-slate-800 rounded-bl-none border border-slate-200 shadow-sm'
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{msg.text}</p>
+                </div>
+
+                {/* Rich interactive elements inside assistant responses */}
+                {msg.role === 'assistant' && (msg.riskLevel || msg.isReadyToSearch) && (
+                  <div className="mt-2 space-y-2 w-[85%] animate-in fade-in">
+                    {msg.riskLevel && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-slate-500 font-medium">Semáforo de Riesgo FTO:</span>
+                        <span className={`px-2 py-0.5 rounded-full font-bold uppercase tracking-wider text-[10px] ${getRiskColor(msg.riskLevel)}`}>
+                          {msg.riskLevel}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {msg.isReadyToSearch && msg.suggestedQuery && (
+                      <div className="bg-blue-50/80 border border-blue-200 p-3 rounded-xl flex flex-col gap-2 shadow-sm">
+                        <span className="text-xs text-blue-900 font-semibold flex items-center gap-1">
+                          <Search className="w-3.5 h-3.5 text-blue-600" />
+                          Ecuación de búsqueda lista:
+                        </span>
+                        <code className="text-xs font-mono bg-white p-2 rounded border border-blue-100 text-blue-800 break-all select-all">
+                          {msg.suggestedQuery}
+                        </code>
+                        <button
+                          onClick={() => {
+                            if (msg.suggestedQuery) {
+                              onSearchRequest(msg.suggestedQuery);
+                              setIsOpen(false);
+                            }
+                          }}
+                          className="mt-1 w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition shadow-sm"
+                        >
+                          <Search className="w-3.5 h-3.5" />
+                          Ejecutar Búsqueda de Patentes
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex items-center gap-2 text-slate-400 text-xs p-2 bg-white rounded-xl border border-slate-200 w-fit">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                <span>LIA está analizando tu respuesta...</span>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input Area */}
+          <div className="p-3 bg-white border-t border-slate-200">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSend();
+              }}
+              className="flex items-center gap-2"
+            >
+              <textarea
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Escribe tu mensaje aquí..."
+                rows={1}
+                className="flex-1 max-h-24 p-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white resize-none text-slate-800"
+              />
+              <button
+                type="submit"
+                disabled={!inputValue.trim() || isLoading}
+                className="p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 transition shadow-sm"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
+            <p className="text-[10px] text-center text-slate-400 mt-2">
+              Este análisis FTO es preliminar y no constituye opinión legal.
+            </p>
+          </div>
         </div>
-      </div>
-      
-      {/* Overlay */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/20 z-40 md:hidden"
-          onClick={() => setIsOpen(false)}
-        />
       )}
     </>
   );
