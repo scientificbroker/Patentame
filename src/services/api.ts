@@ -13,7 +13,22 @@ export interface PatentResult {
   year?: string;
 }
 
-export const searchPatents = async (query: string): Promise<PatentResult[]> => {
+export interface SearchResponse {
+  results: PatentResult[];
+  searchEquation?: string;
+  detectedCip?: {
+    code: string;
+    description: string;
+  };
+  counts?: {
+    total: number;
+    patents: number;
+    theses: number;
+    articles: number;
+  };
+}
+
+export const searchPatentsDetailed = async (query: string): Promise<SearchResponse> => {
   const response = await fetch('/api/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -26,5 +41,15 @@ export const searchPatents = async (query: string): Promise<PatentResult[]> => {
   }
 
   const data = await response.json();
-  return data.results || [];
+  return {
+    results: data.results || [],
+    searchEquation: data.searchEquation,
+    detectedCip: data.detectedCip,
+    counts: data.counts
+  };
+};
+
+export const searchPatents = async (query: string): Promise<PatentResult[]> => {
+  const res = await searchPatentsDetailed(query);
+  return res.results;
 };

@@ -4,7 +4,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { PatentData, PatentSectionKey, PatentType, Language, UploadedFile } from './types';
 import { SectionInput } from './components/SectionInput';
 import { improveText, isAiAvailable, generateDraft, generateInventionMemoryDraft, classifyPatentType, PatentClassification, generateSearchQuery } from './src/services/gemini';
-import { searchPatents, PatentResult } from './src/services/api';
+import { searchPatents, searchPatentsDetailed, PatentResult } from './src/services/api';
 import { SparklesIcon, DownloadIcon, UploadIcon, PencilIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, FileTextIcon, GithubIcon, InfoIcon } from './components/icons';
 import { STRINGS, getSectionDetails } from './data/i18n';
 import customLogo from './assets/logot.png';
@@ -73,6 +73,8 @@ const App: React.FC = () => {
     const [searchResults, setSearchResults] = useState<PatentResult[]>([]);
     const [hasSearched, setHasSearched] = useState(false);
     const [selectedPatents, setSelectedPatents] = useState<Set<string>>(new Set());
+    const [searchActiveTab, setSearchActiveTab] = useState<'all' | 'patent' | 'thesis' | 'article'>('all');
+    const [searchEquation, setSearchEquation] = useState<string | null>(null);
 
     // Classification State
     const [classification, setClassification] = useState<PatentClassification | null>(null);
@@ -303,11 +305,13 @@ const App: React.FC = () => {
         setIsSearching(true);
         setSearchError(null);
         setSearchResults([]);
+        setSearchEquation(null);
+        setSearchActiveTab('all');
         setHasSearched(false);
         try {
-            // Pasamos la descripción completa a la API multivariada de patentes, tesis y literatura
-            const results = await searchPatents(ideaDescription);
-            setSearchResults(results);
+            const data = await searchPatentsDetailed(ideaDescription);
+            setSearchResults(data.results);
+            setSearchEquation(data.searchEquation || null);
             setHasSearched(true);
         } catch (error: any) {
             console.error('Patent search failed:', error);
@@ -322,13 +326,16 @@ const App: React.FC = () => {
         setIsSearching(true);
         setSearchError(null);
         setSearchResults([]);
+        setSearchEquation(null);
+        setSearchActiveTab('all');
         setHasSearched(false);
         setStep(1);
         setSurveillanceMode('assistant');
-        setIdeaDescription(query); // Put the query in the box so they know what was searched
+        setIdeaDescription(query);
         try {
-            const results = await searchPatents(query);
-            setSearchResults(results);
+            const data = await searchPatentsDetailed(query);
+            setSearchResults(data.results);
+            setSearchEquation(data.searchEquation || null);
             setHasSearched(true);
         } catch (error: any) {
             console.error('FTO Search failed:', error);
@@ -355,10 +362,13 @@ const App: React.FC = () => {
         let content = "DOCUMENTO AUTO-GENERADO: ESTADO DE LA TÉCNICA (VIGILANCIA TECNOLÓGICA)\n\n";
         
         selectedDocs.forEach((doc, idx) => {
-            content += `--- PATENTE ${idx + 1} ---\n`;
+            const typeLabel = doc.documentTypeLabel || 'DOCUMENTO TÉCNICO';
+            content += `--- [${idx + 1}] ${typeLabel.toUpperCase()} ---\n`;
             content += `TÍTULO: ${doc.title}\n`;
             content += `ID/FUENTE: ${doc.id} (${doc.source})\n`;
-            content += `INVENTOR/ASIGNATARIO: ${doc.inventor} / ${doc.assignee}\n`;
+            if (doc.cipCode) content += `CLASIFICACIÓN CIP: [${doc.cipCode}] ${doc.cipDescription || ''}\n`;
+            content += `INVENTOR/AUTOR/ASIGNATARIO: ${doc.inventor} / ${doc.assignee}\n`;
+            if (doc.link) content += `ENLACE OFICIAL: ${doc.link}\n`;
             content += `RESUMEN:\n${doc.abstract}\n\n`;
         });
 
@@ -702,25 +712,110 @@ const App: React.FC = () => {
                                 )}
 
                                 {searchResults.length > 0 && (
-                                    <div className="mt-8">
-                                        <h3 className="font-bold text-white mb-4">
-                                            {lang === 'es' ? 'Documentos de Estado de la Técnica Encontrados (Patentes, Tesis y Papers)' : 'Prior Art Documents Found (Patents, Theses & Papers)'}
-                                        </h3>
-                                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
-                                            {searchResults.map((patent) => (
+                                    <div className="mt-8 space-y-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                            <h3 className="font-bold text-white text-base">
+                                                {lang === 'es' ? 'Documentos de Estado de la Técnica Encontrados' : 'Prior Art Documents Found'}
+                                            </h3>
+                                            <span className="text-xs text-purple-300 font-semibold bg-purple-950/60 border border-purple-500/30 px-3 py-1 rounded-full w-fit">
+                                                {searchResults.length} {lang === 'es' ? 'referencias recuperadas' : 'references found'}
+                                            </span>
+                                        </div>
+
+                                        {/* Ecuación Booleana de Búsqueda FTO */}
+                                        {searchEquation && (
+                                            <div className="p-3 rounded-2xl bg-black/50 border border-purple-500/30 text-xs text-purple-200 flex flex-col sm:flex-row items-start sm:items-center gap-2 shadow-inner">
+                                                <span className="font-bold text-purple-400 shrink-0 flex items-center gap-1.5">
+                                                    <span>🔍</span>
+                                                    <span>{lang === 'es' ? 'Ecuación FTO Generada:' : 'Generated FTO Equation:'}</span>
+                                                </span>
+                                                <code className="font-mono text-[11px] text-purple-200 bg-purple-900/30 px-2 py-0.5 rounded break-all select-all flex-1">
+                                                    {searchEquation}
+                                                </code>
+                                            </div>
+                                        )}
+
+                                        {/* Tabs de Categorización */}
+                                        <div className="flex flex-wrap items-center gap-2 pt-1 border-b border-white/10 pb-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => setSearchActiveTab('all')}
+                                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                                    searchActiveTab === 'all'
+                                                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                                                        : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                {lang === 'es' ? 'Todos' : 'All'} ({searchResults.length})
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setSearchActiveTab('patent')}
+                                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                                    searchActiveTab === 'patent'
+                                                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                                                        : 'bg-purple-950/30 border border-purple-500/30 text-purple-300 hover:bg-purple-900/40'
+                                                }`}
+                                            >
+                                                <span>🔬</span>
+                                                <span>{lang === 'es' ? 'Patentes' : 'Patents'}</span>
+                                                <span className="px-1.5 py-0.2 rounded-full bg-purple-500/30 text-[10px]">
+                                                    {searchResults.filter(r => r.documentType === 'patent').length}
+                                                </span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setSearchActiveTab('thesis')}
+                                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                                    searchActiveTab === 'thesis'
+                                                        ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                                                        : 'bg-amber-950/30 border border-amber-500/30 text-amber-300 hover:bg-amber-900/40'
+                                                }`}
+                                            >
+                                                <span>🎓</span>
+                                                <span>{lang === 'es' ? 'Tesis Académicas' : 'Theses'}</span>
+                                                <span className="px-1.5 py-0.2 rounded-full bg-amber-500/30 text-[10px]">
+                                                    {searchResults.filter(r => r.documentType === 'thesis').length}
+                                                </span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setSearchActiveTab('article')}
+                                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                                    searchActiveTab === 'article'
+                                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                                                        : 'bg-blue-950/30 border border-blue-500/30 text-blue-300 hover:bg-blue-900/40'
+                                                }`}
+                                            >
+                                                <span>📄</span>
+                                                <span>{lang === 'es' ? 'Papers Científicos' : 'Papers'}</span>
+                                                <span className="px-1.5 py-0.2 rounded-full bg-blue-500/30 text-[10px]">
+                                                    {searchResults.filter(r => r.documentType === 'article').length}
+                                                </span>
+                                            </button>
+                                        </div>
+
+                                        {/* Lista de Resultados Filtrados por Tab */}
+                                        <div className="space-y-4 max-h-[460px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
+                                            {searchResults
+                                                .filter(item => searchActiveTab === 'all' || item.documentType === searchActiveTab)
+                                                .map((patent) => (
                                                 <div 
                                                     key={patent.id}
                                                     onClick={() => togglePatentSelection(patent.id)}
-                                                    className={`p-4 rounded-xl border cursor-pointer transition-all ${selectedPatents.has(patent.id) ? 'border-green-500 bg-green-900/20' : 'border-white/10 bg-white/5 hover:border-white/30'}`}
+                                                    className={`p-4 rounded-2xl border cursor-pointer transition-all ${selectedPatents.has(patent.id) ? 'border-green-500 bg-green-900/20 shadow-lg shadow-green-900/20' : 'border-white/10 bg-white/5 hover:border-white/30'}`}
                                                 >
                                                     <div className="flex items-start gap-3">
-                                                        <div className={`mt-1 w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${selectedPatents.has(patent.id) ? 'bg-green-500 border-green-500' : 'border-gray-500'}`}>
+                                                        <div className={`mt-1 w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-colors ${selectedPatents.has(patent.id) ? 'bg-green-500 border-green-500' : 'border-gray-500 bg-black/40'}`}>
                                                             {selectedPatents.has(patent.id) && <CheckIcon className="w-3.5 h-3.5 text-white" />}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             {/* Document Type Badge & Year */}
                                                             <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                                                                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                                                                <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
                                                                     patent.documentType === 'patent' ? 'bg-purple-500/20 border-purple-500/40 text-purple-300' :
                                                                     patent.documentType === 'article' ? 'bg-blue-500/20 border-blue-500/40 text-blue-300' :
                                                                     patent.documentType === 'thesis' ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' :
@@ -729,27 +824,27 @@ const App: React.FC = () => {
                                                                     {patent.documentTypeLabel || '🔬 Patente / Documento Técnico'}
                                                                 </span>
                                                                 {patent.year && patent.year !== 'N/A' && (
-                                                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/10 text-gray-300">
+                                                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/10 text-gray-300">
                                                                         📅 {patent.year}
                                                                     </span>
                                                                 )}
                                                             </div>
 
                                                             {/* Title */}
-                                                            <a href={patent.link} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="font-semibold text-blue-300 hover:underline text-sm block mb-1.5 leading-snug">
+                                                            <a href={patent.link} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="font-semibold text-blue-300 hover:text-blue-200 hover:underline text-sm block mb-1.5 leading-snug">
                                                                 {patent.title}
                                                             </a>
 
                                                             {/* ID & Assignee */}
-                                                            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400 mb-2.5 font-medium">
-                                                                <span className="text-white font-mono bg-white/10 px-1.5 py-0.5 rounded">{patent.id}</span>
+                                                            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400 mb-2 font-medium">
+                                                                <span className="text-white font-mono bg-white/10 px-1.5 py-0.5 rounded text-[11px]">{patent.id}</span>
                                                                 <span>•</span>
-                                                                <span className="truncate max-w-[280px]">{patent.assignee}</span>
+                                                                <span className="truncate max-w-[320px] text-gray-300">{patent.assignee}</span>
                                                             </div>
 
                                                             {/* CIP (Clasificación Internacional de Patentes) Badge */}
                                                             {patent.cipCode && (
-                                                                <div className="mb-2.5 p-2 rounded-lg bg-black/40 border border-purple-500/30 flex items-start gap-2 text-xs">
+                                                                <div className="mb-2 p-2 rounded-xl bg-black/40 border border-purple-500/30 flex items-start gap-2 text-xs">
                                                                     <span className="text-purple-400 font-bold shrink-0 mt-0.5">🏷️ CIP [{patent.cipCode}]:</span>
                                                                     <span className="text-purple-200/90 text-[11px] leading-tight">{patent.cipDescription || 'Clasificación Internacional de Patentes'}</span>
                                                                 </div>
@@ -766,14 +861,15 @@ const App: React.FC = () => {
                                         </div>
                                         
                                         <button
+                                            type="button"
                                             onClick={generatePriorArtDoc}
                                             disabled={selectedPatents.size === 0}
-                                            className="w-full mt-6 py-3 rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-medium flex justify-center items-center gap-2"
+                                            className="w-full mt-4 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold flex justify-center items-center gap-2 shadow-xl shadow-green-900/30 transition-all transform hover:scale-[1.01]"
                                         >
                                             <CheckIcon className="w-5 h-5" />
                                             {lang === 'es' 
-                                                ? `Generar Arte Previo con (${selectedPatents.size}) Patentes` 
-                                                : `Generate Prior Art with (${selectedPatents.size}) Patents`}
+                                                ? `Generar Arte Previo con (${selectedPatents.size}) ${selectedPatents.size === 1 ? 'Documento Seleccionado' : 'Documentos Seleccionados'}`
+                                                : `Generate Prior Art with (${selectedPatents.size}) Selected ${selectedPatents.size === 1 ? 'Document' : 'Documents'}`}
                                         </button>
                                     </div>
                                 )}
