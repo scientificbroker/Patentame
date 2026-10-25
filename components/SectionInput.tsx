@@ -413,8 +413,17 @@ export const SectionInput: React.FC<SectionInputProps> = ({
             style={{ background: 'transparent' }}
           />
            {prediction && !value && !isPredicting && (
-             <div className="absolute bottom-2 right-3 text-xs text-gray-500 bg-gray-800/50 px-2 py-1 rounded">
-                Press <kbd className="font-sans border border-gray-600 rounded px-1.5 py-0.5">Tab</kbd> to accept
+             <div className="absolute bottom-2 right-3 flex items-center gap-2 z-20">
+                <button
+                  type="button"
+                  onClick={onAcceptPrediction}
+                  className="px-2.5 py-1 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-lg shadow transition transform hover:scale-105 cursor-pointer"
+                >
+                  ✓ {lang === 'es' ? 'Aceptar sugerencia' : 'Accept suggestion'}
+                </button>
+                <span className="hidden sm:inline-block text-xs text-gray-400 bg-gray-800/80 px-2 py-1 rounded border border-gray-700">
+                  {lang === 'es' ? 'o pulsa' : 'or press'} <kbd className="font-sans border border-gray-600 rounded px-1.5 py-0.5 text-white">Tab</kbd>
+                </span>
              </div>
            )}
            {isPredicting && (

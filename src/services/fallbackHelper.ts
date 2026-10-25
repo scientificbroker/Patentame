@@ -44,7 +44,7 @@ function extractDomainAndKeywords(patentData?: PatentData, priorArtDoc?: Uploade
   };
 }
 
-function getLocalWipoSectionFallback(
+export function getLocalWipoSectionFallback(
   sectionId: string, 
   lang: Language, 
   textToImprove?: string,

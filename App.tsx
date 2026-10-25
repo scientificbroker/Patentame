@@ -1197,6 +1197,10 @@ const App: React.FC = () => {
                             isPredicting={isPredicting}
                             onAcceptPrediction={handleAcceptPrediction}
                             generatingDraftText={STRINGS[lang].generatingDraft}
+                            patentData={patentData}
+                            priorArtDoc={priorArtDoc}
+                            inventionDescDoc={inventionDescDoc}
+                            lang={lang}
                         />
                     );
                 }
