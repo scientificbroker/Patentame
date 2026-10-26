@@ -47,8 +47,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Faltan los datos (parts o contents) en el payload' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  // Soporte de alta disponibilidad: Clave Primaria (GEMINI_API_KEY) + Clave Secundaria de Respaldo (GEMINI_API_KEY_SECONDARY)
+  // También soporta dos claves separadas por coma dentro de GEMINI_API_KEY="clave_primaria,clave_secundaria"
+  const rawPrimary = process.env.GEMINI_API_KEY || '';
+  const rawSecondary = process.env.GEMINI_API_KEY_SECONDARY || '';
+  const apiKeys = [
+    ...rawPrimary.split(','),
+    ...rawSecondary.split(',')
+  ]
+    .map(k => k.trim())
+    .filter(Boolean);
+
+  if (apiKeys.length === 0) {
     return res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server.' });
   }
 
@@ -116,15 +126,15 @@ IMPORTANTE: Tu respuesta debe ser un JSON válido, sin bloques de código Markdo
 
     let response: any = null;
 
-    for (const modelToTry of modelsToTry) {
-      let attempts = 0;
-      const maxAttempts = 2;
+    // Iteramos primero sobre la Clave Primaria; SOLO si se agota (429/403/5xx) conmutamos automáticamente a la Clave Secundaria
+    for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
+      const currentKey = apiKeys[keyIdx];
+      let quotaExhaustedOnCurrentKey = false;
 
-      while (attempts < maxAttempts) {
-        attempts++;
+      for (const modelToTry of modelsToTry) {
         try {
           response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${modelToTry}:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelToTry}:generateContent?key=${currentKey}`,
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -132,9 +142,9 @@ IMPORTANTE: Tu respuesta debe ser un JSON válido, sin bloques de código Markdo
             }
           );
         } catch (fetchErr) {
-          console.warn(`[api/chat] Fetch error on model ${modelToTry}:`, fetchErr);
+          console.warn(`[api/chat] Fetch error on key #${keyIdx + 1}, model ${modelToTry}:`, fetchErr);
           response = null;
-          break;
+          continue;
         }
 
         if (response && response.ok) {
@@ -142,7 +152,7 @@ IMPORTANTE: Tu respuesta debe ser un JSON válido, sin bloques de código Markdo
         }
 
         // Si es 400 (parámetro no soportado), reintentar sin systemInstruction top-level
-        if (response && response.status === 400 && attempts < maxAttempts) {
+        if (response && response.status === 400) {
           const fallbackBody = {
             contents: [
               {
@@ -161,7 +171,7 @@ IMPORTANTE: Tu respuesta debe ser un JSON válido, sin bloques de código Markdo
           };
           try {
             response = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/${modelToTry}:generateContent?key=${apiKey}`,
+              `https://generativelanguage.googleapis.com/v1beta/models/${modelToTry}:generateContent?key=${currentKey}`,
               {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -170,25 +180,24 @@ IMPORTANTE: Tu respuesta debe ser un JSON válido, sin bloques de código Markdo
             );
             if (response && response.ok) break;
           } catch (e) {
-            break;
+            // Ignorar y continuar
           }
         }
 
-        if (response && (response.status === 404 || response.status === 400)) {
-          break; // Pasar al siguiente modelo
+        // Si la clave actual devuelve 429 (cuota agotada) o 403, saltar de inmediato a la Clave Secundaria si existe
+        if (response && (response.status === 429 || response.status === 403)) {
+          console.warn(`[api/chat] Key #${keyIdx + 1} returned ${response.status} on ${modelToTry}. Switching to secondary key if available.`);
+          quotaExhaustedOnCurrentKey = true;
+          break;
         }
-
-        if (response && (response.status === 429 || response.status >= 500)) {
-          if (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, attempts * 1000));
-            continue;
-          }
-        }
-        break;
       }
 
       if (response && response.ok) {
-        break;
+        break; // Éxito con la clave actual, no tocamos la secundaria
+      }
+
+      if (quotaExhaustedOnCurrentKey && keyIdx < apiKeys.length - 1) {
+        continue; // Pasa inmediatamente a la Clave Secundaria (Tier 1)
       }
     }
 
