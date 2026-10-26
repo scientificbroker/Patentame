@@ -197,25 +197,43 @@ const App: React.FC = () => {
     const currentSectionIndex = step - 2;
     const currentSection = (currentSectionIndex >= 0 && currentSectionIndex < SECTIONS.length) ? SECTIONS[currentSectionIndex] : null;
 
-    useEffect(() => {
-        const fetchPrediction = async () => {
-            if (currentSection && !patentData[currentSection.id] && patentType && isAiAvailable()) {
-                setIsPredicting(true);
-                setPrediction(null);
-                try {
-                    const draft = await generateDraft(currentSection, patentType, lang, patentData, priorArtDoc, inventionDescDoc);
-                    // Check if user hasn't started typing in the meantime
-                    if (!patentData[currentSection.id]) {
-                        setPrediction(draft);
-                    }
-                } finally {
-                    setIsPredicting(false);
-                }
-            }
-        };
+    // Predicción de texto: se dispara UNA sola vez por (sección, idioma, tipo) y sólo si el campo está vacío.
+    // Antes dependía de `patentData`, lo que re-lanzaba la llamada IA en cada cambio y producía un bucle.
+    const patentDataRef = useRef(patentData);
+    patentDataRef.current = patentData;
+    const lastPredictionKeyRef = useRef<string | null>(null);
 
-        fetchPrediction();
-    }, [step, lang, patentType, priorArtDoc, inventionDescDoc, patentData]); // Rerun when step or context changes
+    useEffect(() => {
+        if (!currentSection || !patentType || !isAiAvailable()) return;
+        if (patentDataRef.current[currentSection.id]) return;
+
+        const key = `${currentSection.id}|${lang}|${patentType}`;
+        if (lastPredictionKeyRef.current === key) return;
+        lastPredictionKeyRef.current = key;
+
+        let cancelled = false;
+        setIsPredicting(true);
+        setPrediction(null);
+
+        (async () => {
+            try {
+                const draft = await generateDraft(currentSection, patentType, lang, patentDataRef.current, priorArtDoc, inventionDescDoc);
+                if (!cancelled && !patentDataRef.current[currentSection.id]) {
+                    setPrediction(draft);
+                }
+            } catch (err) {
+                console.warn('Prediction skipped:', err);
+            } finally {
+                if (!cancelled) setIsPredicting(false);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+            // Permite reintentar si el usuario vuelve a esta sección
+            if (lastPredictionKeyRef.current === key) lastPredictionKeyRef.current = null;
+        };
+    }, [step, lang, patentType]);
 
     // Handlers
     const handleValueChange = (section: PatentSectionKey) => (value: string) => {

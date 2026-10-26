@@ -54,7 +54,10 @@ export function getLocalWipoSectionFallback(
 ): string {
   const isEs = lang === 'es';
   const baseText = textToImprove ? textToImprove.trim() : '';
-  const { domain, descriptor } = extractDomainAndKeywords(patentData, priorArtDoc, inventionDescDoc);
+  const extracted = extractDomainAndKeywords(patentData, priorArtDoc, inventionDescDoc);
+  const domain = extracted.domain;
+  const userTitle = (patentData?.title || '').trim();
+  const descriptor = (domain === 'general' && userTitle) ? userTitle.replace(/[.\s]+$/g, '') : extracted.descriptor;
 
   switch (sectionId) {
     case 'title':

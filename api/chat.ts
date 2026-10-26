@@ -292,6 +292,12 @@ IMPORTANTE: Tu respuesta debe ser un JSON válido, sin bloques de código Markdo
     }
 
     if (action === 'generateDraft' || action === 'improveText') {
+      // No fabricamos texto con palabras del prompt (causaba basura tipo "Dispositivo para text Type Utility Model...").
+      // El cliente dispone de un fallback contextual propio basado en los datos reales del usuario.
+      return res.status(503).json({ error: 'AI temporarily unavailable', fallback: true });
+    }
+
+    if ((action as string) === '__legacy_draft_fallback__') {
       let fallbackText = '';
       if (/título|title/i.test(allPromptText)) {
         if (domain === 'drones') {
